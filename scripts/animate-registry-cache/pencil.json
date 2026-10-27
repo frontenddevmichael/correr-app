@@ -1,0 +1,29 @@
+{
+  "icon": "pencil",
+  "slug": "pencil",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-pencil",
+  "type": "registry:ui",
+  "title": "Pencil Icon",
+  "description": "Pencil icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/pencil/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/pencil.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype PencilProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    pencil: {\n      initial: { x: 0, y: 0 },\n      animate: {\n        x: [0, -1, 0.5, -1, 0.5, 0],\n        y: [0, 1, -0.5, 1, -0.5, 0],\n        transition: { duration: 0.8, ease: 'easeInOut' },\n      },\n    },\n    path1: {},\n    path2: {},\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: PencilProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.pencil} initial=\"initial\" animate={controls}>\n        <motion.path\n          d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"\n          variants={variants.path1}\n          initial=\"initial\"\n          animate={controls}\n        />\n        <motion.path\n          d=\"m15 5 4 4\"\n          variants={variants.path2}\n          initial=\"initial\"\n          animate={controls}\n        />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction Pencil(props: PencilProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Pencil,\n  Pencil as PencilIcon,\n  type PencilProps,\n  type PencilProps as PencilIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "edit",
+      "write",
+      "pen",
+      "compose"
+    ]
+  }
+}

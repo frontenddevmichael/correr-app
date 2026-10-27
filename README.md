@@ -16,6 +16,98 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+## Backend
+
+The app uses Convex through `src/api/convexCorrerApi.ts`. This checkout is connected to the cloud dev deployment in `.env.local`.
+
+Start the Convex dev watcher before the app:
+
+```bash
+npm run convex:dev
+```
+
+Then run the app in a second terminal:
+
+```bash
+npm run web
+```
+
+Useful commands:
+
+```bash
+npm run convex:once       # push functions once without watching
+npx convex env list       # list deployment environment variables
+npx convex data circles   # inspect data in the connected deployment
+```
+
+To use a different project or a local anonymous backend, run:
+
+```bash
+npx convex dev --configure new
+```
+
+The production deployment is already created. Deploy backend changes with:
+
+```bash
+npx convex deploy
+```
+
+Point a production client at the production `EXPO_PUBLIC_CONVEX_URL` and `EXPO_PUBLIC_CONVEX_SITE_URL`. Restart Expo after changing either value. Auth currently supports email and password only. Google sign-in and billing are still stubbed. AI runs through OpenRouter on the server.
+
+### Scheduled work and timezones
+
+`convex/crons.ts` runs three jobs:
+
+- Every 15 minutes, open commitments past their due date become missed.
+- Every 15 minutes, daily check-in and weekly review reminders are created using each profile's timezone and quiet hours.
+- Daily, expired rate-limit windows are removed.
+
+Day boundaries use `profile.timezone`, so a check-in made at 8pm in Lagos counts for the Lagos day, not the UTC day. The client syncs its detected timezone when the profile loads.
+
+### AI
+
+AI calls run in Convex actions and use OpenRouter. The key lives only in the Convex deployment, never in `EXPO_PUBLIC_*` variables or the client bundle.
+
+```bash
+npx convex env set OPENROUTER_API_KEY        # paste the key when prompted
+npx convex env set --prod OPENROUTER_API_KEY
+npx convex env set OPENROUTER_MODEL openai/gpt-oss-20b
+npx convex env set --prod OPENROUTER_MODEL openai/gpt-oss-20b
+```
+
+`OPENROUTER_MODEL` is optional and defaults to `openai/gpt-oss-20b`. Coach replies and roadmap generation share the model. Roadmap requests use a strict JSON schema, retry once if the response is malformed or truncated, and fall back to the local stub if OpenRouter is unavailable. Coach replies include recent conversation history and today's commitments.
+
+Check the server connection without opening the app:
+
+```bash
+npx convex run ai:openRouterHealth
+npx convex run ai:openRouterRoadmapHealth
+npx convex run --prod ai:openRouterHealth
+```
+
+### Auth storage
+
+- Web keeps the Convex Auth token in AsyncStorage (browser localStorage).
+- iOS and Android keep it in the platform keychain through `expo-secure-store`.
+
+### Checks
+
+```bash
+npm test                  # timezone, reminder-window, and AI text unit tests
+npx tsc --noEmit          # app + Convex typecheck
+npx expo lint             # lint
+```
+
+The same checks run in `.github/workflows/ci.yml`.
+
+### Builds
+
+`app.json` now includes the iOS bundle ID, Android package, and build numbers. `eas.json` defines development, preview, and production profiles. The first EAS build still needs the Expo project ID:
+
+```bash
+npx eas-cli@latest init
+```
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

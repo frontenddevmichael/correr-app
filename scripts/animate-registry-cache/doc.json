@@ -1,0 +1,29 @@
+{
+  "icon": "doc",
+  "slug": "file-text",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-file-text",
+  "type": "registry:ui",
+  "title": "File Text Icon",
+  "description": "File Text icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/file-text/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/file-text.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype FileTextProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    sheet: {},\n    fold: {},\n    line1: {\n      initial: { pathLength: 1, opacity: 1 },\n      animate: {\n        pathLength: [0, 1],\n        opacity: [0, 1],\n        transition: { duration: 0.35, delay: 0.05, ease: 'easeOut' },\n      },\n    },\n    line2: {\n      initial: { pathLength: 1, opacity: 1 },\n      animate: {\n        pathLength: [0, 1],\n        opacity: [0, 1],\n        transition: { duration: 0.35, delay: 0.25, ease: 'easeOut' },\n      },\n    },\n    line3: {\n      initial: { pathLength: 1, opacity: 1 },\n      animate: {\n        pathLength: [0, 1],\n        opacity: [0, 1],\n        transition: { duration: 0.35, delay: 0.45, ease: 'easeOut' },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: FileTextProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.path\n        d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\"\n        variants={variants.sheet}\n        initial=\"initial\"\n        animate={controls}\n      />\n      <motion.path\n        d=\"M14 2v5a1 1 0 0 0 1 1h5\"\n        variants={variants.fold}\n        initial=\"initial\"\n        animate={controls}\n      />\n      <motion.path\n        d=\"M8 9h2\"\n        variants={variants.line1}\n        initial=\"initial\"\n        animate={controls}\n      />\n      <motion.path\n        d=\"M8 13h8\"\n        variants={variants.line2}\n        initial=\"initial\"\n        animate={controls}\n      />\n      <motion.path\n        d=\"M8 17h8\"\n        variants={variants.line3}\n        initial=\"initial\"\n        animate={controls}\n      />\n    </motion.svg>\n  );\n}\n\nfunction FileText(props: FileTextProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  FileText,\n  FileText as FileTextIcon,\n  type FileTextProps,\n  type FileTextProps as FileTextIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "data",
+      "txt",
+      "pdf",
+      "document"
+    ]
+  }
+}

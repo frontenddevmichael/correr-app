@@ -1,0 +1,30 @@
+{
+  "icon": "wallet",
+  "slug": "wallet",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-wallet",
+  "type": "registry:ui",
+  "title": "Wallet Icon",
+  "description": "Wallet icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/wallet/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/wallet.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype WalletProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    group: {\n      initial: { scale: 1 },\n      animate: {\n        scale: [1, 0.92, 1.04, 1],\n        transition: { duration: 0.5, ease: 'easeInOut' },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: WalletProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.group} initial=\"initial\" animate={controls}>\n        <path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\" />\n        <path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\" />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction Wallet(props: WalletProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Wallet,\n  Wallet as WalletIcon,\n  type WalletProps,\n  type WalletProps as WalletIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "money",
+      "finance",
+      "pocket",
+      "payment",
+      "cash"
+    ]
+  }
+}

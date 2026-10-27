@@ -1,41 +1,54 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+Correr — coding agent notes
+----------------
 
-## Expo has changed — do not trust your training data
+Stack
+- Expo + expo-router + expo-splash-screen
+- React Native 0.86ish, Reanimated 4, react-native-worklets
+- Convex for real backend; mock backends live in src/api for kill-switch
+- Design system in src/design-system; tokens, theme, motion, components
+- Auth: Convex auth (Password + Google stub), token storage in SecureStore
+- AI: OpenRouter via Convex server action; never client side
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+Build / check commands
+- typecheck:  npx tsc --noEmit
+- lint:       npx expo lint
+- install:    npm install
+- dev:        npx expo start
+- web preview: expo start --web --https --port 8081
+  then forward tunnel 8081 -> 443 and accept the self-signed WebKit CA
+  (AppleWebData CA material lives in src/design-system/AppleWebdataCa.ts)
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+Onboarding flow today
+- welcome screen with three illustrator slides + dots + Sign in / Google / Create account
+- signup: name, email, password
+- welcome: (not implemented yet — falls through to index gate)
+- onboarding profile-setup screen
+- index gate: loading -> welcome, no profile -> profile setup, onboardingState vision -> /vision/new, else tabs
 
-## Commands
+Known gaps
+- onboarding wizard after signup is brief; spec wants short multi-step wizard here with progress + skip/resume + persistence
+- account screen (More tab) is still the generic three-card profile + appearance chips + explore tiles + notifications + sign out
+- customization surface exists only as theme mode chips; full appearance settings not built
+- splash on web only; native splash exists in app.json, boot splash exists in _layout
+- empty states exist on home, notifications, progress, vision via EmptyState; vision empty art is the animated folder stack now
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+Convex env vars
+- OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_SITE_URL, OPENROUTER_APP_NAME
+- set with `npx convex env set KEY VALUE` then deploy
+- dev mode fallback: if OPENROUTER_API_KEY missing the server falls back to the local StubAi
 
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
+Design direction
+- dark base is true black; elevated surfaces are near-black steps
+- ink is the accent, not hue; color carries meaning
+- typography is Poppins display + Inter body
+- icon art is custom line-art/wordmark, not stock Material symbols
 
-Run lint and typecheck before declaring any task done.
+Legal text
+- All POLICY/* pages are marked draft for lawyer review
+- Third-party AI disclosure required in onboarding + account + coach surface
+- Consent capture required at signup
 
-## Navigation & Routing
-
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
-
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+Do not do
+- do not hardcode the live OpenRouter key anywhere
+- do not commit .env* or the AppleWebData CA file in a product build
+- do not add unit tests until build + fix work is done

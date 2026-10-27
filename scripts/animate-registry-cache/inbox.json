@@ -1,0 +1,29 @@
+{
+  "icon": "inbox",
+  "slug": "mail",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-mail",
+  "type": "registry:ui",
+  "title": "Mail Icon",
+  "description": "Mail icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/mail/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/mail.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype MailProps = IconProps<keyof typeof animations>;\n\nconst CLOSED_BODY =\n  'M20 4c1.105 0 2 0.895 2 2v12a2 2 0 0 1 -2 2H4a2 2 0 0 1 -2 -2V6a2 2 0 0 1 2 -2l8 0a0 0 0 0 1 0 0l8 0Z';\nconst OPEN_BODY =\n  'M21.2 8.4c0.5 0.38 0.8 0.97 0.8 1.6v10a2 2 0 0 1 -2 2H4a2 2 0 0 1 -2 -2V10a2 2 0 0 1 0.8 -1.6l8 -6a2 2 0 0 1 2.4 0l8 6Z';\nconst CLOSED_FLAP = 'm22 7 -8.991 5.727a2 2 0 0 1 -2.009 0L2 7';\nconst OPEN_FLAP = 'm22 10 -8.97 5.7a1.94 1.94 0 0 1 -2.06 0L2 10';\n\nconst animations = {\n  default: {\n    group: {\n      initial: { y: 0 },\n      animate: {\n        y: [0, -1.5, 0],\n        transition: { duration: 0.6, ease: 'easeInOut' },\n      },\n    },\n    path1: {\n      initial: { pathLength: 1, opacity: 1 },\n      animate: {\n        pathLength: [0, 1],\n        opacity: [0, 1],\n        transition: { duration: 0.6, ease: 'easeInOut' },\n      },\n    },\n    path2: {},\n  } satisfies Record<string, Variants>,\n  open: {\n    group: {},\n    path1: {\n      initial: {\n        d: CLOSED_FLAP,\n        transition: { duration: 0.35, ease: 'easeInOut' },\n      },\n      animate: {\n        d: OPEN_FLAP,\n        transition: { duration: 0.45, ease: 'easeInOut' },\n      },\n    },\n    path2: {\n      initial: {\n        d: CLOSED_BODY,\n        transition: { duration: 0.35, ease: 'easeInOut' },\n      },\n      animate: {\n        d: OPEN_BODY,\n        transition: { duration: 0.45, ease: 'easeInOut' },\n      },\n    },\n  } satisfies Record<string, Variants>,\n  peek: {\n    group: {},\n    path1: {\n      initial: { d: CLOSED_FLAP },\n      animate: {\n        d: [CLOSED_FLAP, OPEN_FLAP, OPEN_FLAP, CLOSED_FLAP],\n        transition: {\n          duration: 1.4,\n          times: [0, 0.3, 0.7, 1],\n          ease: 'easeInOut',\n        },\n      },\n    },\n    path2: {\n      initial: { d: CLOSED_BODY },\n      animate: {\n        d: [CLOSED_BODY, OPEN_BODY, OPEN_BODY, CLOSED_BODY],\n        transition: {\n          duration: 1.4,\n          times: [0, 0.3, 0.7, 1],\n          ease: 'easeInOut',\n        },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: MailProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.group} initial=\"initial\" animate={controls}>\n        <motion.path\n          d={CLOSED_FLAP}\n          variants={variants.path1}\n          initial=\"initial\"\n          animate={controls}\n        />\n        <motion.path\n          d={CLOSED_BODY}\n          variants={variants.path2}\n          initial=\"initial\"\n          animate={controls}\n        />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction Mail(props: MailProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Mail,\n  Mail as MailIcon,\n  type MailProps,\n  type MailProps as MailIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "email",
+      "envelope",
+      "letter",
+      "inbox"
+    ]
+  }
+}

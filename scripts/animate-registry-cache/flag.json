@@ -1,0 +1,30 @@
+{
+  "icon": "flag",
+  "slug": "flag",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-flag",
+  "type": "registry:ui",
+  "title": "Flag Icon",
+  "description": "Flag icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/flag/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/flag.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype FlagProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    cloth: {\n      initial: { skewY: 0, scaleX: 1, transformOrigin: '0% 50%' },\n      animate: {\n        skewY: [0, 3, -3, 1.5, 0],\n        scaleX: [1, 0.9, 1, 0.95, 1],\n        transformOrigin: '0% 50%',\n        transition: { duration: 0.9, ease: 'easeInOut' },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: FlagProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <path d=\"M4 22V4\" />\n      <motion.path\n        d=\"M4 4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528\"\n        variants={variants.cloth}\n        initial=\"initial\"\n        animate={controls}\n      />\n    </motion.svg>\n  );\n}\n\nfunction Flag(props: FlagProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Flag,\n  Flag as FlagIcon,\n  type FlagProps,\n  type FlagProps as FlagIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "report",
+      "country",
+      "goal",
+      "milestone",
+      "mark"
+    ]
+  }
+}

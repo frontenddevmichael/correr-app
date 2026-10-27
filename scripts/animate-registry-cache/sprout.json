@@ -1,0 +1,30 @@
+{
+  "icon": "sprout",
+  "slug": "leaf",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-leaf",
+  "type": "registry:ui",
+  "title": "Leaf Icon",
+  "description": "Leaf icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/leaf/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/leaf.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype LeafProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    group: {\n      initial: { rotate: 0, transformOrigin: '0% 100%' },\n      animate: {\n        rotate: [0, 3, -3, 1.5, 0],\n        transformOrigin: '0% 100%',\n        transition: { duration: 0.9, ease: 'easeInOut' },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: LeafProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.group} initial=\"initial\" animate={controls}>\n        <path d=\"M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20\" />\n        <path d=\"M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13\" />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction Leaf(props: LeafProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Leaf,\n  Leaf as LeafIcon,\n  type LeafProps,\n  type LeafProps as LeafIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "sustainability",
+      "nature",
+      "energy",
+      "plant",
+      "autumn"
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "icon": "calendar",
+  "slug": "calendar",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-calendar",
+  "type": "registry:ui",
+  "title": "Calendar Icon",
+  "description": "Calendar icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/calendar/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/calendar.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype CalendarProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    ring1: {\n      initial: { y: 0 },\n      animate: {\n        y: [0, -1, 0, -0.3, 0],\n        transition: {\n          duration: 0.5,\n          ease: 'easeInOut',\n          times: [0, 0.3, 0.55, 0.75, 1],\n        },\n      },\n    },\n    ring2: {\n      initial: { y: 0 },\n      animate: {\n        y: [0, -1, 0, -0.3, 0],\n        transition: {\n          duration: 0.5,\n          ease: 'easeInOut',\n          times: [0, 0.3, 0.55, 0.75, 1],\n          delay: 0.08,\n        },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: CalendarProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.path\n        d=\"M8 2v3\"\n        variants={variants.ring1}\n        initial=\"initial\"\n        animate={controls}\n      />\n      <motion.path\n        d=\"M16 2v3\"\n        variants={variants.ring2}\n        initial=\"initial\"\n        animate={controls}\n      />\n      <rect x={3} y={3} width={18} height={18} rx={2} />\n      <path d=\"M3 9h18\" />\n    </motion.svg>\n  );\n}\n\nfunction Calendar(props: CalendarProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Calendar,\n  Calendar as CalendarIcon,\n  type CalendarProps,\n  type CalendarProps as CalendarIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "date",
+      "month",
+      "year",
+      "event",
+      "schedule"
+    ]
+  }
+}

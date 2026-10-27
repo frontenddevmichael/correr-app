@@ -1,0 +1,30 @@
+{
+  "icon": "tag",
+  "slug": "tag",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-tag",
+  "type": "registry:ui",
+  "title": "Tag Icon",
+  "description": "Tag icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/tag/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/tag.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype TagProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    group: {\n      initial: { rotate: 0, transformOrigin: '27.5% 27.5%' },\n      animate: {\n        rotate: [0, 8, -6, 3, 0],\n        transformOrigin: '27.5% 27.5%',\n        transition: { duration: 0.8, ease: 'easeInOut' },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: TagProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.group} initial=\"initial\" animate={controls}>\n        <path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" />\n        <circle cx={7.5} cy={7.5} r={0.5} />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction Tag(props: TagProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  Tag,\n  Tag as TagIcon,\n  type TagProps,\n  type TagProps as TagIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "label",
+      "badge",
+      "ticket",
+      "price",
+      "sale"
+    ]
+  }
+}

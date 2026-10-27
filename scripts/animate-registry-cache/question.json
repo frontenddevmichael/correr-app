@@ -1,0 +1,30 @@
+{
+  "icon": "question",
+  "slug": "circle-question-mark",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-circle-question-mark",
+  "type": "registry:ui",
+  "title": "Circle Question Mark Icon",
+  "description": "Circle Question Mark icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/circle-question-mark/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/circle-question-mark.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype CircleQuestionMarkProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    mark: {\n      initial: { y: 0 },\n      animate: {\n        y: [0, -2, 0, -0.8, 0],\n        transition: {\n          duration: 0.6,\n          ease: 'easeInOut',\n          times: [0, 0.3, 0.55, 0.75, 1],\n        },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: CircleQuestionMarkProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <circle cx={12} cy={12} r={10} />\n      <motion.g variants={variants.mark} initial=\"initial\" animate={controls}>\n        <path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\" />\n        <path d=\"M12 17h.01\" />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction CircleQuestionMark(props: CircleQuestionMarkProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  CircleQuestionMark,\n  CircleQuestionMark as CircleQuestionMarkIcon,\n  type CircleQuestionMarkProps,\n  type CircleQuestionMarkProps as CircleQuestionMarkIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "help",
+      "question",
+      "faq",
+      "support",
+      "unknown"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "icon": "school",
+  "slug": "graduation-cap",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-graduation-cap",
+  "type": "registry:ui",
+  "title": "Graduation Cap Icon",
+  "description": "Graduation Cap icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/graduation-cap/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/graduation-cap.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype GraduationCapProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    hat: {\n      initial: { rotate: 0, transformOrigin: '50% 50%' },\n      animate: {\n        rotate: [0, -8, 4, 0],\n        transformOrigin: '50% 50%',\n        transition: {\n          duration: 0.9,\n          times: [0, 0.35, 0.7, 1],\n          ease: 'easeInOut',\n        },\n      },\n    },\n    tassel: {\n      initial: { rotate: 0, transformOrigin: '50% 0%' },\n      animate: {\n        rotate: [0, 12, -8, 4, 0],\n        transformOrigin: '50% 0%',\n        transition: {\n          duration: 0.9,\n          delay: 0.1,\n          times: [0, 0.3, 0.6, 0.85, 1],\n          ease: 'easeInOut',\n        },\n      },\n    },\n    part: {},\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: GraduationCapProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.hat} initial=\"initial\" animate={controls}>\n        <motion.path\n          d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"\n          variants={variants.part}\n          initial=\"initial\"\n          animate={controls}\n        />\n        <motion.path\n          d=\"M22 10v6\"\n          variants={variants.tassel}\n          initial=\"initial\"\n          animate={controls}\n        />\n        <motion.path\n          d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"\n          variants={variants.part}\n          initial=\"initial\"\n          animate={controls}\n        />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction GraduationCap(props: GraduationCapProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  GraduationCap,\n  GraduationCap as GraduationCapIcon,\n  type GraduationCapProps,\n  type GraduationCapProps as GraduationCapIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "school",
+      "university",
+      "learn",
+      "study",
+      "mortarboard",
+      "education"
+    ]
+  }
+}

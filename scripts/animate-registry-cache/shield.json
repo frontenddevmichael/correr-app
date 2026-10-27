@@ -1,0 +1,30 @@
+{
+  "icon": "shield",
+  "slug": "shield-check",
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons-lucide-shield-check",
+  "type": "registry:ui",
+  "title": "Shield Check Icon",
+  "description": "Shield Check icon component.",
+  "dependencies": [
+    "@animate-ui/react",
+    "motion"
+  ],
+  "files": [
+    {
+      "path": "registry/icons/shield-check/index.tsx",
+      "type": "registry:ui",
+      "target": "@components/animate-ui/icons/shield-check.tsx",
+      "content": "'use client';\n\nimport * as React from 'react';\nimport { motion, type Variants } from 'motion/react';\n\nimport {\n  getVariants,\n  useAnimateIconContext,\n  IconWrapper,\n  type IconProps,\n} from '@animate-ui/react/icons';\n\ntype ShieldCheckProps = IconProps<keyof typeof animations>;\n\nconst animations = {\n  default: {\n    group: {\n      initial: { scale: 1 },\n      animate: {\n        scale: [1, 0.92, 1.04, 1],\n        transition: { duration: 0.6, ease: 'easeInOut' },\n      },\n    },\n    check: {\n      initial: { pathLength: 1, opacity: 1 },\n      animate: {\n        pathLength: [0, 1],\n        opacity: [0, 1],\n        transition: { duration: 0.4, ease: 'easeInOut', delay: 0.2 },\n      },\n    },\n  } satisfies Record<string, Variants>,\n} as const;\n\nfunction IconComponent({ size, ...props }: ShieldCheckProps) {\n  const { controls } = useAnimateIconContext();\n  const variants = getVariants(animations);\n\n  return (\n    <motion.svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      width={size}\n      height={size}\n      viewBox=\"0 0 24 24\"\n      fill=\"none\"\n      stroke=\"currentColor\"\n      strokeWidth={2}\n      strokeLinecap=\"round\"\n      strokeLinejoin=\"round\"\n      {...props}\n    >\n      <motion.g variants={variants.group} initial=\"initial\" animate={controls}>\n        <path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" />\n        <motion.path\n          d=\"m9 12 2 2 4-4\"\n          variants={variants.check}\n          initial=\"initial\"\n          animate={controls}\n        />\n      </motion.g>\n    </motion.svg>\n  );\n}\n\nfunction ShieldCheck(props: ShieldCheckProps) {\n  return <IconWrapper icon={IconComponent} {...props} />;\n}\n\nexport {\n  animations,\n  ShieldCheck,\n  ShieldCheck as ShieldCheckIcon,\n  type ShieldCheckProps,\n  type ShieldCheckProps as ShieldCheckIconProps,\n};\n"
+    }
+  ],
+  "meta": {
+    "keywords": [
+      "security",
+      "safe",
+      "protected",
+      "verified",
+      "secure"
+    ]
+  }
+}
