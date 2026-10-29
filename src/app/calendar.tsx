@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
+import { friendlyErrorMessage } from '@/api/errorMessage';
 import type { Commitment } from '@/core/domain';
 import {
   endOfMonth,
@@ -95,18 +96,24 @@ export default function CalendarScreen() {
   const [selected, setSelected] = useState(today);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const list = await api.listCommitments({
-      from: startOfMonth(month).toISOString(),
-      to: endOfMonth(month).toISOString(),
-    });
-    setCommitments(list.filter((c) => c.state !== 'cancelled'));
+    try {
+      const list = await api.listCommitments({
+        from: startOfMonth(month).toISOString(),
+        to: endOfMonth(month).toISOString(),
+      });
+      setCommitments(list.filter((c) => c.state !== 'cancelled'));
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(friendlyErrorMessage(err));
+    }
   }, [api, month]);
 
   useFocusEffect(
     useCallback(() => {
-      load().catch(() => {});
+      load();
     }, [load]),
   );
 
@@ -158,6 +165,23 @@ export default function CalendarScreen() {
       title="Calendar"
       subtitle="See the shape of the month, then make one clear goal for the day."
     >
+      {loadError ? (
+        <Card variant="muted">
+          <AppText variant="bodyBold">Couldn’t load your commitments.</AppText>
+          <AppText variant="caption" tone="secondary">
+            {loadError}
+          </AppText>
+          <Button
+            label="Try again"
+            variant="secondary"
+            size="sm"
+            onPress={() => {
+              setLoadError(null);
+              load();
+            }}
+          />
+        </Card>
+      ) : null}
       <Reveal>
         <CalendarMonth
           month={month}

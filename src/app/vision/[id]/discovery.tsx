@@ -11,7 +11,11 @@ import { useColors } from '@/design-system/theme';
 import { useToast } from '@/design-system/Toast';
 import { spacing } from '@/design-system/tokens';
 import { AppText } from '@/design-system/typography';
-import { LIMITS, sanitizeMultiline } from '@/core/validation';
+import {
+  LIMITS,
+  sanitizeMultiline,
+  sanitizeSingleLine,
+} from '@/core/validation';
 
 const TIME_OPTIONS = [15, 30, 45, 60, 90];
 
@@ -47,18 +51,35 @@ export default function Discovery() {
   const [step, setStep] = useState(0);
   const [currentState, setCurrentState] = useState('');
   const [minutes, setMinutes] = useState(30);
+  const [customMinutes, setCustomMinutes] = useState('30');
   const [blockers, setBlockers] = useState<string[]>([]);
+  const [customBlocker, setCustomBlocker] = useState('');
+  const [constraints, setConstraints] = useState('');
   const [pace, setPace] = useState<'steady' | 'intense' | 'flexible'>('steady');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const parsedCustomMinutes = Number(customMinutes);
+  const customMinutesError =
+    customMinutes.trim() !== '' && !(parsedCustomMinutes >= 5 && parsedCustomMinutes <= 480)
+      ? 'Enter a number between 5 and 480 minutes.'
+      : undefined;
   const [stepError, setStepError] = useState<string | null>(null);
 
   const toggleBlocker = (b: string) =>
     setBlockers((prev) => (prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]));
 
+  const addCustomBlocker = () => {
+    const value = sanitizeSingleLine(customBlocker, 40).trim();
+    if (!value) return;
+    if (!blockers.some((item) => item.toLowerCase() === value.toLowerCase())) {
+      setBlockers((prev) => [...prev, value]);
+    }
+    setCustomBlocker('');
+  };
+
   const submit = async () => {
     if (currentState.trim().length < 10) {
-      setError('Tell the AI where you’re starting from — at least 10 characters.');
+      setError('Tell the coach where you’re starting from. Use at least 10 characters.');
       setStep(0);
       return;
     }
@@ -71,7 +92,7 @@ export default function Discovery() {
         timeAvailablePerDay: minutes,
         blockers,
         preferredPace: pace,
-        constraints: '',
+        constraints: constraints.trim(),
       });
       toast.show('Discovery saved. Building your roadmap.', { tone: 'success' });
       router.replace({ pathname: '/vision/[id]/roadmap', params: { id } });
@@ -105,7 +126,7 @@ export default function Discovery() {
     },
     {
       question: 'What gets in the way?',
-      hint: 'Name the real obstacles — and how hard you want to push.',
+      hint: 'Name the real obstacles, and how hard you want to push.',
     },
   ][step];
 
@@ -184,11 +205,43 @@ export default function Discovery() {
                 <Chip
                   key={m}
                   label={`${m} min`}
-                  selected={minutes === m}
-                  onPress={() => setMinutes(m)}
+                  selected={minutes === m && customMinutes === String(m)}
+                  onPress={() => {
+                    setMinutes(m);
+                    setCustomMinutes(String(m));
+                  }}
                 />
               ))}
             </View>
+            <View style={styles.customTimeRow}>
+              <AppText variant="caption" tone="secondary">
+                Or set your own
+              </AppText>
+              <View style={styles.customTimeInput}>
+                <Input
+                  value={customMinutes}
+                  onChangeText={(value) => {
+                    const clean = value.replace(/\D/g, '').slice(0, 3);
+                    setCustomMinutes(clean);
+                    const parsed = Number(clean);
+                    if (Number.isInteger(parsed) && parsed >= 5 && parsed <= 480) {
+                      setMinutes(parsed);
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  accessibilityLabel="Custom minutes per day"
+                  error={customMinutesError}
+                  containerStyle={styles.minutesField}
+                />
+                <AppText variant="caption" tone="muted">
+                  min
+                </AppText>
+              </View>
+            </View>
+            <AppText variant="caption" tone="muted" center>
+              Between 5 and 480 minutes.
+            </AppText>
           </View>
         </View>
       ) : null}
@@ -208,7 +261,46 @@ export default function Discovery() {
                   onPress={() => toggleBlocker(b)}
                 />
               ))}
+              {blockers
+                .filter((b) => !BLOCKER_OPTIONS.includes(b))
+                .map((b) => (
+                  <Chip key={b} label={b} selected onPress={() => toggleBlocker(b)} />
+                ))}
             </View>
+            <View style={styles.customBlockerRow}>
+              <Input
+                value={customBlocker}
+                onChangeText={(value) => setCustomBlocker(value.slice(0, 40))}
+                placeholder="Something else"
+                returnKeyType="done"
+                onSubmitEditing={addCustomBlocker}
+                containerStyle={styles.customBlockerInput}
+                accessibilityLabel="Add your own blocker"
+              />
+              <Button
+                label="Add"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                onPress={addCustomBlocker}
+                disabled={!customBlocker.trim()}
+              />
+            </View>
+          </View>
+          <View>
+            <AppText variant="overline" tone="secondary" style={styles.label}>
+              Anything else the plan should account for?
+            </AppText>
+            <Input
+              value={constraints}
+              onChangeText={(value) => setConstraints(sanitizeMultiline(value, 300))}
+              placeholder="Optional. Caregiving, transport, health, a deadline."
+              multiline
+              maxLength={300}
+              textAlignVertical="top"
+              style={styles.constraints}
+              accessibilityLabel="Other constraints"
+            />
           </View>
           <View>
             <AppText variant="overline" tone="secondary" style={styles.label}>
@@ -271,6 +363,34 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.sm,
+  },
+  customTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  customTimeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  minutesField: {
+    width: 84,
+  },
+  customBlockerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  customBlockerInput: {
+    flex: 1,
+  },
+  constraints: {
+    minHeight: 96,
+    paddingTop: spacing.md,
   },
   paceHint: {
     marginTop: spacing.md,

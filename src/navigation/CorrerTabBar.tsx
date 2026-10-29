@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimateIcon, type AnimateIconName } from '@/design-system/AnimateIcon';
 import { Icon } from '@/design-system/icons';
 import { useReducedMotion } from '@/design-system/motion';
+import { useHaptics } from '@/design-system/settings';
 import { useColors, useTheme } from '@/design-system/theme';
 import { layout, radii, shadows, spacing } from '@/design-system/tokens';
 import { AppText } from '@/design-system/typography';
@@ -42,7 +43,7 @@ const ORDER = ['index', 'vision', 'coach', 'progress'];
 const CREATE_ITEMS = [
   {
     icon: 'plus',
-    title: 'New promise',
+    title: 'New goal',
     caption: 'Plan one clear action for today',
     route: '/commitment/new',
   },
@@ -55,7 +56,7 @@ const CREATE_ITEMS = [
   {
     icon: 'sparkles',
     title: 'Ask coach',
-    caption: 'Think it through with your coach',
+    caption: 'Talk it through with your coach',
     route: '/(tabs)/coach',
   },
 ] as const;
@@ -140,6 +141,7 @@ export function CorrerTabBar({
   const colors = useColors();
   const { isDark } = useTheme();
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
   const insets = useSafeAreaInsets();
   const [barWidth, setBarWidth] = React.useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -251,6 +253,7 @@ export function CorrerTabBar({
   if (routes.length === 0 || activeIndex < 0) return null;
 
   const go = (route: Route) => {
+    haptics.tap();
     const focused = activeName === route.name;
     const event = emitter.emit({
       type: 'tabPress',
@@ -272,12 +275,12 @@ export function CorrerTabBar({
     ? 'Create'
     : activeRoute.name === 'vision'
       ? 'New vision'
-      : 'New promise';
+      : 'New goal';
   const fabHint = opensMenu
     ? 'Opens the create menu'
     : activeRoute.name === 'vision'
       ? 'Opens the vision composer'
-      : 'Opens the commitment composer';
+      : 'Opens the goal composer';
 
   const openMenu = () => {
     setMenuVisible(true);
@@ -293,6 +296,7 @@ export function CorrerTabBar({
   };
 
   const onFabPress = () => {
+    haptics.tap();
     setFabPlay((n) => n + 1);
     if (opensMenu) {
       openMenu();
@@ -497,7 +501,10 @@ export function CorrerTabBar({
                 accessibilityRole="button"
                 accessibilityLabel={item.title}
                 accessibilityHint={item.caption}
-                onPress={() => closeMenu(() => router.push(item.route))}
+                onPress={() => {
+                  haptics.tap();
+                  closeMenu(() => router.push(item.route));
+                }}
                 style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
               >
                 <View

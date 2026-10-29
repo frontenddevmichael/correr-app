@@ -20,6 +20,14 @@ export interface CoachContext {
   history?: CoachHistoryMessage[];
   /** Coach tone chosen in onboarding (warm | direct | socratic). */
   tone?: string;
+  /** Preferred reply length (brief | balanced | detailed). */
+  length?: string;
+  /** A short note the user wants the coach to remember. */
+  userContext?: string;
+  displayName?: string;
+  bio?: string;
+  /** Areas the user chose in profile setup. */
+  focusAreas?: string[];
 }
 
 /**

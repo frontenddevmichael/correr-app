@@ -63,7 +63,8 @@ export function Input({
         {...rest}
       />
       {error ? (
-        <AppText variant="caption" tone="error" style={styles.message}>
+        // role="alert" so field errors are announced, not just drawn (QA-024).
+        <AppText variant="caption" tone="error" style={styles.message} role="alert">
           {error}
         </AppText>
       ) : hint ? (

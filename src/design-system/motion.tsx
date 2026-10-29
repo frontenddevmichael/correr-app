@@ -9,7 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { useMotionEnabled } from './settings';
+import { useHaptics, useMotionEnabled } from './settings';
 import { motion as motionTokens } from './tokens';
 import { AppText } from './typography';
 
@@ -96,6 +96,7 @@ export function MotionPressable({
   scaleTo = 0.975,
 }: MotionPressableProps) {
   const reduced = useReducedMotion();
+  const haptics = useHaptics();
   const [scale] = useState(() => new Animated.Value(1));
 
   const settle = (toValue: number) => {
@@ -109,7 +110,10 @@ export function MotionPressable({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        if (!disabled) haptics.tap();
+        onPress?.();
+      }}
       disabled={disabled}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}

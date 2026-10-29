@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  type ScrollViewProps,
   StyleSheet,
   View,
   ViewStyle,
@@ -42,6 +43,10 @@ interface ScreenProps {
   onRefresh?: () => void;
   /** Lift the scroll surface above the keyboard (forms with a pinned CTA). */
   avoidKeyboard?: boolean;
+  /** Extra scroll-surface props, e.g. scroll progress for reading screens. */
+  scrollViewProps?: ScrollViewProps;
+  /** Override the default bottom padding (136, tuned for tab screens). */
+  contentPaddingBottom?: number;
   edges?: Edge[];
   style?: ViewStyle;
   testID?: string;
@@ -68,6 +73,8 @@ export function Screen({
   refreshing = false,
   onRefresh,
   avoidKeyboard = false,
+  scrollViewProps,
+  contentPaddingBottom,
   edges = ['top'],
   style,
   testID,
@@ -84,7 +91,13 @@ export function Screen({
   };
 
   const inner = (
-    <View style={[padded && styles.padded, styles.inner]}>
+    <View
+      style={[
+        padded && styles.padded,
+        padded && contentPaddingBottom != null && { paddingBottom: contentPaddingBottom },
+        styles.inner,
+      ]}
+    >
       {back ? (
         <Pressable
           onPress={handleBack}
@@ -137,6 +150,7 @@ export function Screen({
     <>
       {scrollable ? (
         <ScrollView
+          {...scrollViewProps}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

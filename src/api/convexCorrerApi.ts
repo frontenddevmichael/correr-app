@@ -51,6 +51,7 @@ import type {
   DiscoveryInput,
   VisionInput,
 } from './correrApi';
+import { friendlyError } from './errorMessage';
 
 /**
  * ConvexCorrerApi — the real-backend implementation of CorrerApi.
@@ -128,14 +129,51 @@ const PROFILE_PATCH_KEYS = [
   'timezone',
   'avatarColor',
   'bio',
+  'focusAreas',
   'appearance',
   'onboardingState',
   'notificationPrefs',
   'coachingTone',
+  'coachLength',
+  'coachContext',
 ] as const;
 
+/**
+ * Wraps `client.query/mutation/action` so every rejection is re-thrown with a
+ * user-safe message before any screen can render `e.message` (see
+ * `errorMessage.ts`). One choke point instead of 97 call sites.
+ */
+function normalizeApiErrors(client: ConvexReactClient): ConvexReactClient {
+  const call = (fn: (...args: unknown[]) => unknown, args: unknown[]): Promise<unknown> => {
+    try {
+      return Promise.resolve(fn(...args)).catch((e: unknown) => {
+        throw friendlyError(e);
+      });
+    } catch (e) {
+      throw friendlyError(e);
+    }
+  };
+
+  return new Proxy(client, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop);
+      if (
+        (prop === 'query' || prop === 'mutation' || prop === 'action') &&
+        typeof value === 'function'
+      ) {
+        return (...args: unknown[]) => call(value.bind(target), args);
+      }
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  }) as ConvexReactClient;
+}
+
 export class ConvexCorrerApi implements CorrerApi {
-  constructor(private readonly client: ConvexReactClient) {}
+  private readonly client: ConvexReactClient;
+
+  constructor(client: ConvexReactClient) {
+    this.client = normalizeApiErrors(client);
+  }
 
   // ---------- Auth ----------
 
@@ -838,6 +876,10 @@ export class ConvexCorrerApi implements CorrerApi {
 
   async markAllRead(): Promise<void> {
     await this.client.mutation(api.notifications.markAllRead, {});
+  }
+
+  async clearRead(): Promise<void> {
+    await this.client.mutation(api.notifications.clearRead, {});
   }
 
   async setPreference(kind: NotificationKind, enabled: boolean): Promise<void> {

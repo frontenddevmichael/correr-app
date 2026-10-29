@@ -46,6 +46,8 @@ export interface Profile {
   timezone: string;
   avatarColor: string;
   bio?: string;
+  /** Structured focus areas from onboarding or profile editing. */
+  focusAreas?: string[];
   /** JSON blob of AppearanceSettings — synced customization (see design-system/settings). */
   appearance?: string;
   level: LevelName;
@@ -54,6 +56,10 @@ export interface Profile {
   notificationPrefs: NotificationPreferences;
   /** Coach tone chosen in onboarding: warm | direct | socratic. */
   coachingTone?: string;
+  /** Coach reply length: brief | balanced | detailed. */
+  coachLength?: string;
+  /** A short note the user wants the coach to remember. */
+  coachContext?: string;
   /** Consent captured at sign-up: policy version + ISO timestamp. */
   consentVersion?: string;
   consentAt?: string;
@@ -546,7 +552,7 @@ export type AnalyticsEvent =
  * Version stamped onto sign-up consent. Bump whenever the Privacy Policy or
  * Terms drafts change in a way that needs re-consent.
  */
-export const CONSENT_VERSION = 'privacy-2026-10-v1';
+export const CONSENT_VERSION = 'legal-2026-10-27-v1';
 
 // ---------- Auth ----------
 

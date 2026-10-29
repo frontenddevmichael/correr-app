@@ -40,6 +40,20 @@ export const markAllRead = mutation({
   },
 });
 
+export const clearRead = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const rows = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const n of rows.filter((x) => x.readAt)) {
+      await ctx.db.delete(n._id);
+    }
+  },
+});
+
 const preferenceKey: Partial<
   Record<string, keyof Profile["notificationPrefs"]>
 > = {

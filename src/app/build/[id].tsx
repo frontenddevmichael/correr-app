@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
+import { friendlyErrorMessage } from '@/api/errorMessage';
 import { formatDateRange, formatMonthDay } from '@/core/dates';
 import type { Hackathon, HackathonMilestone, HackathonSubmission, HackathonTeam } from '@/core/domain';
 import { Badge } from '@/design-system/Badge';
@@ -66,47 +67,66 @@ export default function BuildDetail() {
   const [milestoneError, setMilestoneError] = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
-    const list = await api.listHackathons();
-    const h = list.find((x) => x.id === id) ?? null;
-    const t = await api.getTeam(id);
-    const [ms, subs] = await Promise.all([
-      t ? api.listTeamMilestones(t.id) : Promise.resolve([]),
-      api.listSubmissions(id),
-    ]);
-    setHackathon(h);
-    setTeam(t);
-    setMilestones(ms);
-    setSubmissions(subs);
-    setLoading(false);
+    try {
+      const list = await api.listHackathons();
+      const h = list.find((x) => x.id === id) ?? null;
+      const t = await api.getTeam(id);
+      const [ms, subs] = await Promise.all([
+        t ? api.listTeamMilestones(t.id) : Promise.resolve([]),
+        api.listSubmissions(id),
+      ]);
+      setHackathon(h);
+      setTeam(t);
+      setMilestones(ms);
+      setSubmissions(subs);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(friendlyErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }, [api, id]);
+
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      api.listHackathons(),
-      api.getTeam(id),
-      api.listSubmissions(id),
-    ])
-      .then(([list, t, subs]) => {
+    (async () => {
+      try {
+        const [list, t, subs] = await Promise.all([
+          api.listHackathons(),
+          api.getTeam(id),
+          api.listSubmissions(id),
+        ]);
         const h = list.find((x) => x.id === id) ?? null;
+        let ms: HackathonMilestone[] = [];
+        if (t) {
+          try {
+            ms = await api.listTeamMilestones(t.id);
+          } catch {
+            // milestones are secondary — the sprint still renders without them
+            ms = [];
+          }
+        }
+        if (!active) return;
         setHackathon(h);
         setTeam(t);
         setSubmissions(subs);
-        if (!t) {
-          setLoading(false);
-          return;
-        }
-        api
-          .listTeamMilestones(t.id)
-          .then((ms) => {
-            if (!active) return;
-            setMilestones(ms);
-            setLoading(false);
-          })
-          .catch(() => {});
-      })
-      .catch(() => {});
+        setMilestones(ms);
+        setLoadError(null);
+      } catch (err) {
+        if (active) setLoadError(friendlyErrorMessage(err));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
     return () => {
       active = false;
     };
@@ -217,9 +237,19 @@ export default function BuildDetail() {
   if (!hackathon) {
     return (
       <Screen back="push" title="Correr Build">
-        <AppText variant="body" tone="secondary">
-          Sprint not found.
-        </AppText>
+        {loadError ? (
+          <Card variant="muted">
+            <AppText variant="h3">Couldn’t load this sprint.</AppText>
+            <AppText variant="caption" tone="secondary">
+              {loadError}
+            </AppText>
+            <Button label="Try again" variant="secondary" size="sm" onPress={retryLoad} />
+          </Card>
+        ) : (
+          <AppText variant="body" tone="secondary">
+            Sprint not found.
+          </AppText>
+        )}
       </Screen>
     );
   }
@@ -311,7 +341,7 @@ export default function BuildDetail() {
             </AppText>
             {milestones.length === 0 ? (
               <AppText variant="caption" tone="secondary">
-                Break the sprint into milestones — each one keeps the team honest.
+                Break the sprint into milestones. Each one keeps the team honest.
               </AppText>
             ) : (
               <View style={styles.rows}>
@@ -406,7 +436,7 @@ export default function BuildDetail() {
             ) : null}
             <Input
               label="What did your team ship?"
-              placeholder="e.g. HabitOS — a study habit tracker"
+              placeholder="e.g. HabitOS, a study habit tracker"
               value={subTitle}
               onChangeText={(value) => {
                 setSubTitle(sanitizeSingleLine(value));

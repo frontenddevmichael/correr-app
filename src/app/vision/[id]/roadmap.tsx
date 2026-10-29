@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
 import type { GeneratedRoadmap } from '@/core/domain';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
+import { useConfirm } from '@/design-system/confirm';
 import { Icon } from '@/design-system/icons';
 import { Input } from '@/design-system/Input';
 import { Reveal, useReducedMotion } from '@/design-system/motion';
@@ -72,82 +73,157 @@ function twoDigits(value: number): string {
   return value.toString().padStart(2, '0');
 }
 
-/** Staged progress: a slow three-dot pulse through the build messages. */
+/**
+ * An illustrated route build. The path fills node by node, the active node
+ * breathes, and the copy stays honest about the wait instead of promising a
+ * fixed time.
+ */
 function RoadmapBuilding({ title }: { title: string }) {
   const colors = useColors();
   const reduced = useReducedMotion();
   const [stage, setStage] = useState(0);
-  // Dots pulse in sequence; a new stage re-seeds the loop.
   const [pulse] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
+    const timers = [
+      setTimeout(() => setStage(1), 10_000),
+      setTimeout(() => setStage(2), 25_000),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  useEffect(() => {
     if (reduced) return;
-    const advance = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 6500);
     pulse.setValue(0);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: STAGES.length, duration: 2600, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
-    return () => {
-      clearInterval(advance);
-      loop.stop();
-    };
+    return () => loop.stop();
   }, [pulse, reduced]);
+
+  const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] });
+  const haloOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.24, 0] });
+  const captions = [
+    'Sketching the route from where you are today.',
+    'Placing milestones around your real week.',
+    'Still working. Complex plans take a little longer.',
+  ];
 
   return (
     <View style={styles.building}>
-      <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {STAGES.map((_, i) => {
-          const opacity = reduced
-            ? i <= stage ? 1 : 0.3
-            : pulse.interpolate({
-                inputRange: [Math.max(0, i - 1), i, i + 1, STAGES.length],
-                outputRange: [0.3, 1, 0.3, 0.3],
-                extrapolate: 'clamp',
-              });
-          return (
-            <Animated.View
-              key={i}
+      <Card variant="outlined" style={styles.routeCard}>
+        <View
+          style={styles.routeArt}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {STAGES.map((label, i) => {
+            const done = i < stage;
+            const active = i === stage;
+            return (
+              <View key={label} style={styles.routeRow}>
+                <View style={styles.routeNodeCol}>
+                  <View style={styles.nodeWrap}>
+                    {active ? (
+                      <Animated.View
+                        style={[
+                          styles.nodeHalo,
+                          {
+                            backgroundColor: colors.brand,
+                            opacity: haloOpacity,
+                            transform: [{ scale: haloScale }],
+                          },
+                        ]}
+                      />
+                    ) : null}
+                    <View
+                      style={[
+                        styles.node,
+                        {
+                          backgroundColor: done || active ? colors.brand : colors.surface,
+                          borderColor: done || active ? colors.brand : colors.borderStrong,
+                        },
+                      ]}
+                    >
+                      {done ? (
+                        <Icon name="check" size={12} color={colors.textInverse} />
+                      ) : active ? (
+                        <Icon name="sparkles" size={12} color={colors.textInverse} />
+                      ) : null}
+                    </View>
+                  </View>
+                  {i < STAGES.length - 1 ? (
+                    <View
+                      style={[
+                        styles.routeLine,
+                        {
+                          backgroundColor: done ? colors.brand : colors.borderStrong,
+                        },
+                      ]}
+                    />
+                  ) : null}
+                </View>
+                <AppText
+                  variant={done || active ? 'bodyMedium' : 'body'}
+                  tone={done || active ? 'primary' : 'muted'}
+                  style={styles.routeLabel}
+                >
+                  {label}
+                </AppText>
+              </View>
+            );
+          })}
+          <View style={styles.flagRow}>
+            <View
               style={[
-                styles.dot,
+                styles.flag,
                 {
-                  backgroundColor: i <= stage ? colors.brand : colors.borderStrong,
-                  opacity,
+                  borderColor: stage === STAGES.length - 1 ? colors.brand : colors.borderStrong,
                 },
               ]}
-            />
-          );
-        })}
-      </View>
-
-      <View style={styles.stageList}>
-        {STAGES.map((label, i) => {
-          const done = i < stage;
-          const active = i === stage;
-          return (
-            <View key={label} style={styles.stageRow}>
+            >
               <Icon
-                name={done ? 'checkCircle' : 'clock'}
-                size={17}
-                color={done ? colors.brand : active ? colors.textSecondary : colors.textMuted}
+                name="flag"
+                size={15}
+                color={stage === STAGES.length - 1 ? colors.brand : colors.textMuted}
               />
-              <AppText
-                variant={done || active ? 'bodyMedium' : 'body'}
-                tone={done || active ? 'primary' : 'muted'}
-              >
-                {label}
-              </AppText>
             </View>
-          );
-        })}
-      </View>
+            <AppText variant="caption" tone="muted">
+              Ready to run
+            </AppText>
+          </View>
+        </View>
+      </Card>
 
-      <AppText variant="caption" tone="muted" center>
-        {title} — usually under 30 seconds. You can edit everything before saving.
-      </AppText>
+      <View style={styles.buildCopy}>
+        <AppText variant="h3" center>
+          {title}
+        </AppText>
+        <AppText
+          variant="body"
+          tone="secondary"
+          center
+          style={styles.buildCaption}
+          accessibilityLiveRegion="polite"
+        >
+          {captions[stage]}
+        </AppText>
+        <AppText variant="caption" tone="muted" center>
+          You can edit everything before saving.
+        </AppText>
+      </View>
     </View>
   );
 }
@@ -155,6 +231,7 @@ function RoadmapBuilding({ title }: { title: string }) {
 /** Step 3 — the roadmap workbench: build, refine, edit, save. */
 export default function RoadmapWorkbench() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -325,7 +402,7 @@ export default function RoadmapWorkbench() {
 
   const removeGoal = (gi: number) => {
     const goal = plan?.goals[gi];
-    Alert.alert('Remove this goal?', `“${goal?.title.trim() || 'Untitled goal'}” leaves the plan.`, [
+    confirm('Remove this goal?', `“${goal?.title.trim() || 'Untitled goal'}” leaves the plan.`, [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Remove',
@@ -412,8 +489,8 @@ export default function RoadmapWorkbench() {
       <Screen avoidKeyboard back="push" eyebrow="The plan" title="This is taking longer than usual.">
         <Card variant="muted" style={styles.stateCard}>
           <AppText variant="body" tone="secondary">
-            The coach is still working on it — slow connections can stall the request. Your
-            answers and vision are safe; try again whenever you like.
+            The coach is still working on it. Slow connections can stall the request. Your
+            answers and vision are safe, so try again whenever you like.
           </AppText>
           <Button label="Try again" onPress={retry} style={styles.stateBtn} />
           <Button
@@ -445,7 +522,7 @@ export default function RoadmapWorkbench() {
       back="push"
       eyebrow="The plan"
       title="Your roadmap."
-      subtitle="Refine it with the coach or edit it by hand — nothing is saved until you tap Save."
+      subtitle="Refine it with the coach or edit it by hand. Nothing is saved until you tap Save."
       footer={
         <View style={styles.footer}>
           <Button label="Save this roadmap" onPress={save} loading={busy} />
@@ -567,7 +644,7 @@ export default function RoadmapWorkbench() {
                     accessibilityLabel={`Edit goal ${goal.title || 'untitled'}`}
                     style={styles.goalText}
                   >
-                    <AppText variant="h3">{goal.title || 'Untitled goal — tap to name it'}</AppText>
+                    <AppText variant="h3">{goal.title || 'Untitled goal. Tap to name it.'}</AppText>
                     {goal.description ? (
                       <AppText variant="caption" tone="secondary" numberOfLines={2}>
                         {goal.description}
@@ -614,7 +691,7 @@ export default function RoadmapWorkbench() {
                             autoFocus
                           />
                           <Input
-                            placeholder="Timeframe (optional) — e.g. Week 1"
+                            placeholder="Timeframe (optional), e.g. Week 1"
                             value={milestone.timeframe ?? ''}
                             onChangeText={(v) => setMilestoneField(gi, mi, 'timeframe', v)}
                           />
@@ -634,7 +711,7 @@ export default function RoadmapWorkbench() {
                           style={styles.msText}
                         >
                           <AppText variant="bodyMedium">
-                            {milestone.title || 'Untitled milestone — tap to name it'}
+                            {milestone.title || 'Untitled milestone. Tap to name it.'}
                           </AppText>
                           {milestone.timeframe ? (
                             <AppText variant="overline" tone="muted">
@@ -736,28 +813,78 @@ function IconBtn({
 
 const styles = StyleSheet.create({
   building: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: spacing.xl,
-    paddingVertical: spacing.huge,
+    paddingVertical: spacing.xxl,
   },
-  dots: {
+  routeCard: {
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
+  },
+  routeArt: {
+    gap: 0,
+  },
+  routeRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    alignItems: 'stretch',
+    minHeight: 46,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  routeNodeCol: {
+    width: 34,
+    alignItems: 'center',
   },
-  stageList: {
-    alignSelf: 'stretch',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
+  nodeWrap: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  stageRow: {
+  nodeHalo: {
+    position: 'absolute',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+  },
+  node: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeLine: {
+    width: 2,
+    flex: 1,
+    marginVertical: 2,
+    borderRadius: 1,
+  },
+  routeLabel: {
+    flex: 1,
+    marginLeft: spacing.md,
+    marginTop: 6,
+  },
+  flagRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingLeft: 1,
+  },
+  flag: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buildCopy: {
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  buildCaption: {
+    maxWidth: 320,
   },
   stateCard: {
     gap: spacing.lg,

@@ -2,9 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { CorrerGlyph } from '@/design-system/BrandMark';
+import { Icon } from '@/design-system/icons';
 import { useColors } from '@/design-system/theme';
 import { radii, spacing } from '@/design-system/tokens';
 import { AppText } from '@/design-system/typography';
@@ -40,6 +41,27 @@ export function useAuthLabelStyle() {
       color: colors.textPrimary,
     }),
     [colors],
+  );
+}
+
+/** Quiet top-left back affordance shared by every auth screen. */
+export function AuthBack({ fallback = '/(auth)/welcome' }: { fallback?: '/(auth)/welcome' | '/(auth)/login' }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={() => {
+        if (router.canGoBack()) router.back();
+        else router.replace(fallback);
+      }}
+      style={styles.backRow}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+    >
+      <Icon name="chevronLeft" size={16} color={colors.textSecondary} />
+      <AppText variant="caption" tone="secondary">
+        Back
+      </AppText>
+    </Pressable>
   );
 }
 
@@ -92,10 +114,22 @@ export function AuthSegment({ active }: { active: 'login' | 'signup' }) {
   );
 }
 
-export function GoogleButton({ onPress }: { onPress?: () => void }) {
+export function GoogleButton({
+  onPress,
+  loading = false,
+  disabled = false,
+}: {
+  onPress?: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  const inactive = loading || disabled;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={loading ? 'Connecting to Google' : 'Continue with Google'}
+      accessibilityState={{ disabled: inactive, busy: loading }}
+      disabled={inactive}
       onPress={onPress}
       style={({ pressed }) => [styles.googleWrap, pressed && { opacity: 0.85 }]}
     >
@@ -103,10 +137,20 @@ export function GoogleButton({ onPress }: { onPress?: () => void }) {
         colors={['#2E2E2E', '#111111']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={styles.google}
+        style={[styles.google, inactive && { opacity: 0.65 }]}
       >
-        <Image source={require('@/assets/images/google-g.png')} style={styles.googleG} contentFit="contain" />
-        <AppText style={styles.googleText}>Continue with Google</AppText>
+        {loading ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Image
+            source={require('@/assets/images/google-g.png')}
+            style={styles.googleG}
+            contentFit="contain"
+          />
+        )}
+        <AppText style={styles.googleText}>
+          {loading ? 'Connecting…' : 'Continue with Google'}
+        </AppText>
       </LinearGradient>
     </Pressable>
   );
@@ -142,6 +186,14 @@ export function LinkText({
 }
 
 const styles = StyleSheet.create({
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 2,
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.sm,
+  },
   wordmark: {
     flexDirection: 'row',
     alignItems: 'flex-start',

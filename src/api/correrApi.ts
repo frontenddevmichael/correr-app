@@ -224,6 +224,7 @@ export interface NotificationsApi {
   listNotifications(): Promise<AppNotification[]>;
   markRead(id: string): Promise<void>;
   markAllRead(): Promise<void>;
+  clearRead(): Promise<void>;
   setPreference(kind: NotificationKind, enabled: boolean): Promise<void>;
 }
 

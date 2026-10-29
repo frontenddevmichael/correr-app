@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApi, useSession } from '@/api/ApiProvider';
+import type { VisionCategory } from '@/core/domain';
 import { Button } from '@/design-system/Button';
 import { Icon } from '@/design-system/icons';
 import { Reveal } from '@/design-system/motion';
@@ -23,7 +24,6 @@ import { Input } from '@/design-system/Input';
 import { Chip } from '@/design-system/Chip';
 import { useToast } from '@/design-system/Toast';
 import {
-  COACH_TONE_LABELS,
   DOT_COUNT,
   WIZARD_STEPS,
   withName,
@@ -52,6 +52,31 @@ const DOT_TOTAL = DOT_COUNT;
 /** The server requires a vision description of at least 20 characters. */
 const MIN_VISION_WHY = 20;
 
+type Period = 'AM' | 'PM';
+
+function to24Hour(hourText: string, minuteText: string, period: Period): string | null {
+  if (!hourText.trim() || !minuteText.trim()) return null;
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || hour < 1 || hour > 12) return null;
+  if (!Number.isInteger(minute) || minute < 0 || minute > 59) return null;
+  const hour24 = period === 'AM' ? (hour === 12 ? 0 : hour) : hour === 12 ? 12 : hour + 12;
+  if (hour24 < 5 || hour24 > 23 || (hour24 === 23 && minute > 0)) return null;
+  return `${String(hour24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function categoryForGoals(goals: string[]): VisionCategory {
+  const text = goals.join(' ').toLowerCase();
+  if (/health|fitness|body|sleep/.test(text)) return 'health';
+  if (/money|finance|business|wealth/.test(text)) return 'finance';
+  if (/learn|study|school|education/.test(text)) return 'education';
+  if (/career|work|job|studio/.test(text)) return 'career';
+  if (/creat|art|write|music|design/.test(text)) return 'creativity';
+  if (/relationship|family|friend|love/.test(text)) return 'relationships';
+  if (/faith|spirit|prayer|church/.test(text)) return 'faith';
+  return 'other';
+}
+
 export default function SeedWizard() {
   const colors = useColors();
   const { session, profile } = useSession();
@@ -75,7 +100,7 @@ function WizardBody({
   userId,
 }: {
   state: WizardState;
-  setState: (next: WizardState) => void;
+  setState: (next: WizardState | ((current: WizardState) => WizardState)) => void;
   userId: string | null;
 }) {
   const api = useApi();
@@ -112,6 +137,13 @@ function WizardBody({
   const visionTitle = answers.visionTitle ?? '';
   const visionWhy = answers.visionWhy ?? '';
   const [customAnswer, setCustomAnswer] = useState('');
+  const [customHour, setCustomHour] = useState('8');
+  const [customMinute, setCustomMinute] = useState('00');
+  const [customPeriod, setCustomPeriod] = useState<Period>('PM');
+  const customTime = useMemo(
+    () => to24Hour(customHour, customMinute, customPeriod),
+    [customHour, customMinute, customPeriod],
+  );
   const [selected, setSelected] = useState<string | null>(
     step.field && !ARRAY_FIELDS_HAS(step.field) && typeof answers[step.field] === 'string'
       ? (answers[step.field] as string)
@@ -125,8 +157,20 @@ function WizardBody({
   if (prevIndex !== index) {
     setPrevIndex(index);
     const f = step.field;
-    setSelected(f && !ARRAY_FIELDS_HAS(f) && typeof answers[f] === 'string' ? (answers[f] as string) : null);
+    const stored = f && !ARRAY_FIELDS_HAS(f) && typeof answers[f] === 'string'
+      ? (answers[f] as string)
+      : null;
+    setSelected(stored);
     setCustomAnswer('');
+    if (step.id === 'checkIn' && stored) {
+      const [h, m] = stored.split(':').map(Number);
+      if (Number.isInteger(h) && Number.isInteger(m)) {
+        const period: Period = h >= 12 ? 'PM' : 'AM';
+        setCustomPeriod(period);
+        setCustomHour(String(h % 12 === 0 ? 12 : h % 12));
+        setCustomMinute(String(m).padStart(2, '0'));
+      }
+    }
   }
 
   // If a vision appeared (created elsewhere, or resumed after sync), jump past
@@ -151,19 +195,26 @@ function WizardBody({
 
   // ---------- persistence ----------
   const persist = (patch: Partial<WizardState['answers']>, stepOverride?: number) => {
-    setState({
-      ...state,
+    setState((current) => ({
+      ...current,
       step: stepOverride ?? index,
-      answers: { ...answers, ...patch },
-    });
+      answers: { ...current.answers, ...patch },
+    }));
   };
 
   const toggleArrayAnswer = (field: WizardField, value: string) => {
-    const current = field === 'goals' ? goals : [];
-    const next = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
-    setState({ ...state, step: index, answers: { ...answers, [field]: next } });
+    setState((current) => {
+      const existing = current.answers[field];
+      const values = Array.isArray(existing) ? existing : [];
+      const next = values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value];
+      return {
+        ...current,
+        step: index,
+        answers: { ...current.answers, [field]: next },
+      };
+    });
   };
 
   // ---------- derived CTA state ----------
@@ -176,11 +227,14 @@ function WizardBody({
       }
       case 'choice': {
         if (selected) return true;
+        if (step.id === 'checkIn' && customTime) return true;
         if (step.allowCustom && customAnswer.trim().length > 0) return true;
         return false;
       }
       case 'chips':
-        if (step.field === 'goals') return goals.length >= step.min;
+        if (step.field === 'goals') {
+          return goals.length >= step.min || (!!step.allowCustom && customAnswer.trim().length > 0);
+        }
         return true;
       case 'vision':
         return (
@@ -191,19 +245,20 @@ function WizardBody({
       default:
         return true; // ready
     }
-  }, [step, selected, customAnswer, nameValue, goals, visionTitle, visionWhy, hasVision]);
+  }, [step, selected, customAnswer, customTime, nameValue, goals, visionTitle, visionWhy, hasVision]);
 
   const ctaLabel = useMemo(() => {
     if (step.kind === 'chips' && step.field === 'goals' && goals.length < step.min) {
       return 'Pick at least one';
     }
     if (step.kind === 'choice' && !selected && !(step.allowCustom && customAnswer.trim())) {
+      if (step.id === 'checkIn' && customTime) return 'Continue';
       return 'Select an option';
     }
     if (step.kind === 'vision') return 'Save my vision';
     if (step.kind === 'ready') return 'Start running';
     return 'Continue';
-  }, [step, selected, customAnswer, goals.length]);
+  }, [step, selected, customAnswer, customTime, goals.length]);
 
   // ---------- navigation ----------
   /** First index after `from` that should actually render (vision self-skips). */
@@ -224,9 +279,10 @@ function WizardBody({
         title,
         description: why,
         whyItMatters: why,
-        category: 'other',
+        category: categoryForGoals(goals),
         priority: 'medium',
       });
+      setHasVision(true);
       return true;
     } catch (e) {
       toast.show(e instanceof Error ? e.message : 'Could not save your vision.', {
@@ -239,15 +295,26 @@ function WizardBody({
   const goNext = async () => {
     if (!canContinue || busy) return;
 
-    // Persist the answer for this step before advancing.
+    // Build the answer patch once so the advance and the completion write use
+    // the same values. Calling persist() and then setState() separately used
+    // to overwrite the answer with the previous render's snapshot.
+    let patch: Partial<WizardState['answers']> = {};
     if (step.field) {
       if (step.kind === 'text') {
-        persist({ [step.field]: step.field === 'name' ? nameValue : '' });
+        patch = { [step.field]: step.field === 'name' ? nameValue : '' };
       } else if (step.kind === 'choice') {
-        const value = selected ?? (step.allowCustom ? customAnswer.trim() : undefined);
-        if (value) persist({ [step.field]: value });
+        const value =
+          selected ??
+          (step.id === 'checkIn' ? customTime : step.allowCustom ? customAnswer.trim() : undefined);
+        if (value) patch = { [step.field]: value };
+      } else if (step.kind === 'chips' && step.field === 'goals') {
+        const custom = customAnswer.trim();
+        const nextGoals =
+          custom && !goals.some((goal) => goal.toLowerCase() === custom.toLowerCase())
+            ? [...goals, custom]
+            : goals;
+        patch = { goals: nextGoals };
       }
-      // 'chips' / 'vision' persist live on each change.
     }
 
     // The vision step creates the vision before moving on.
@@ -261,9 +328,13 @@ function WizardBody({
     if (index < WIZARD_STEPS.length - 1) {
       const next = nextIndexAfter(index);
       setIndex(next);
-      setState({ ...state, step: next, answers });
+      setState((current) => ({
+        ...current,
+        step: next,
+        answers: { ...current.answers, ...patch },
+      }));
     } else {
-      finish();
+      await finish({ ...answers, ...patch });
     }
   };
 
@@ -273,14 +344,19 @@ function WizardBody({
     // Stepping back over a vision that now exists lands on the question before.
     if (WIZARD_STEPS[next].kind === 'vision' && hasVision) next = Math.max(0, next - 1);
     setIndex(next);
-    setState({ ...state, step: next, answers });
+    setState((current) => ({ ...current, step: next }));
   };
 
   const skipAll = async () => {
     setBusy(true);
     try {
       await completeOnboarding();
+      setState((current) => ({ ...current, completed: true }));
       router.replace('/(tabs)');
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : 'Could not save your setup.', {
+        tone: 'error',
+      });
     } finally {
       setBusy(false);
     }
@@ -291,30 +367,22 @@ function WizardBody({
     if (index < WIZARD_STEPS.length - 1) {
       const next = nextIndexAfter(index);
       setIndex(next);
-      setState({ ...state, step: next, answers });
+      setState((current) => ({ ...current, step: next }));
     } else {
       void finish();
     }
   };
 
   // ---------- completion: every answer lands somewhere visible ----------
-  const completeOnboarding = async () => {
-    const a = state.answers;
+  const completeOnboarding = async (a: WizardState['answers'] = state.answers) => {
     const patch: Record<string, unknown> = { onboardingState: 'done' };
     if (a.name?.trim()) patch.displayName = a.name.trim();
     if (a.coachTone) patch.coachingTone = a.coachTone;
-
-    // Goals + coach tone land on the bio, which the profile and partner views
-    // show — the visible footprint of these answers.
-    const bioBits = [
-      a.goals?.length ? `Focusing on ${a.goals.join(', ')}` : null,
-      a.coachTone ? `Coach style: ${COACH_TONE_LABELS[a.coachTone] ?? a.coachTone}` : null,
-    ].filter(Boolean);
-    if (bioBits.length) patch.bio = bioBits.join(' · ');
+    if (a.goals?.length) patch.focusAreas = a.goals;
 
     // The chosen check-in window becomes a real notification preference
     // (visible and editable in Settings → Notifications). Toggle choices and
-    // accent live only in Settings — skipped in the wizard on purpose.
+    // accent live only in Settings, skipped in the wizard on purpose.
     const prefs = profile?.notificationPrefs;
     if (prefs && a.checkInTime) {
       patch.notificationPrefs = {
@@ -324,15 +392,20 @@ function WizardBody({
     }
 
     await api.updateProfile(patch as never);
-
     await refresh();
   };
 
-  const finish = async () => {
+  const finish = async (answersOverride?: WizardState['answers']) => {
+    const finalAnswers = answersOverride ?? state.answers;
     setBusy(true);
     try {
-      setState({ ...state, step: WIZARD_STEPS.length - 1, completed: true });
-      await completeOnboarding();
+      await completeOnboarding(finalAnswers);
+      setState((current) => ({
+        ...current,
+        step: WIZARD_STEPS.length - 1,
+        answers: finalAnswers,
+        completed: true,
+      }));
       toast.show('You are all set.', { tone: 'success' });
       router.replace('/(tabs)');
     } catch (e) {
@@ -398,7 +471,7 @@ function WizardBody({
           showsVerticalScrollIndicator={false}
         >
           <Reveal key={`${step.id}-title`} distance={10} duration={340}>
-            <AppText variant="mega" center style={styles.title}>
+            <AppText variant="display" center style={styles.title}>
               {title}
             </AppText>
             {subtitle ? (
@@ -408,7 +481,9 @@ function WizardBody({
             ) : null}
           </Reveal>
 
-          <View style={styles.body}>{renderBody()}</View>
+          <Reveal key={`${step.id}-body`} distance={12} delay={40} duration={360}>
+            <View style={styles.body}>{renderBody()}</View>
+          </Reveal>
         </ScrollView>
 
         {/* Footer CTA + skip */}
@@ -495,7 +570,65 @@ function WizardBody({
               })}
             </View>
 
-            {step.allowCustom ? (
+            {step.id === 'checkIn' ? (
+              <View style={styles.customTime}>
+                <AppText variant="bodyMedium" tone="secondary">
+                  Or set your own
+                </AppText>
+                <View style={styles.timeRow}>
+                  <Input
+                    value={customHour}
+                    onChangeText={(value) => {
+                      setSelected(null);
+                      setCustomHour(value.replace(/\D/g, '').slice(0, 2));
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    accessibilityLabel="Check-in hour"
+                    containerStyle={styles.timeInput}
+                    style={styles.timeField}
+                  />
+                  <AppText variant="h3" style={styles.timeColon}>
+                    :
+                  </AppText>
+                  <Input
+                    value={customMinute}
+                    onChangeText={(value) => {
+                      setSelected(null);
+                      setCustomMinute(value.replace(/\D/g, '').slice(0, 2));
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    accessibilityLabel="Check-in minute"
+                    containerStyle={styles.timeInput}
+                    style={styles.timeField}
+                  />
+                  <View style={styles.periodRow}>
+                    <Chip
+                      label="AM"
+                      selected={customPeriod === 'AM'}
+                      onPress={() => {
+                        setSelected(null);
+                        setCustomPeriod('AM');
+                      }}
+                    />
+                    <Chip
+                      label="PM"
+                      selected={customPeriod === 'PM'}
+                      onPress={() => {
+                        setSelected(null);
+                        setCustomPeriod('PM');
+                      }}
+                    />
+                  </View>
+                </View>
+                <AppText variant="caption" tone="muted">
+                  Between 5:00 AM and 11:00 PM.
+                </AppText>
+              </View>
+            ) : null}
+
+            {step.allowCustom && step.id !== 'checkIn' ? (
               <View style={styles.custom}>
                 <Input
                   placeholder="Add your own answer"
@@ -531,6 +664,25 @@ function WizardBody({
                 );
               })}
             </View>
+            {step.allowCustom ? (
+              <View style={styles.custom}>
+                <Input
+                  placeholder="Something else"
+                  value={customAnswer}
+                  onChangeText={setCustomAnswer}
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    const value = customAnswer.trim();
+                    if (!value) return;
+                    toggleArrayAnswer('goals', value);
+                    setCustomAnswer('');
+                  }}
+                />
+                <AppText variant="caption" tone="muted">
+                  Press done to add your own focus area.
+                </AppText>
+              </View>
+            ) : null}
           </View>
         );
       }
@@ -637,8 +789,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   title: {
-    marginTop: spacing.huge,
-    letterSpacing: -1.2,
+    marginTop: spacing.xl,
+    letterSpacing: -0.9,
   },
   subtitle: {
     marginTop: spacing.md,
@@ -646,7 +798,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   body: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingVertical: spacing.xl,
   },
@@ -668,6 +820,30 @@ const styles = StyleSheet.create({
   custom: {
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  customTime: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  timeInput: {
+    width: 64,
+  },
+  timeField: {
+    textAlign: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  timeColon: {
+    marginTop: -2,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginLeft: spacing.xs,
   },
   underLink: {
     alignSelf: 'center',

@@ -22,7 +22,7 @@ export default function NotFound() {
             This page went for a run.
           </AppText>
           <AppText variant="body" tone="secondary" center style={styles.copy}>
-            The link you followed doesn’t exist anymore — or never did. Everything else is
+            The link you followed doesn’t exist anymore, or never did. Everything else is
             still where you left it.
           </AppText>
           <Button

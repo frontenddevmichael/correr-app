@@ -10,6 +10,7 @@ import { Reveal } from '@/design-system/motion';
 import { Screen } from '@/design-system/Screen';
 import {
   ACCENT_PRESETS,
+  useHaptics,
   useSettings,
   type AppearanceSettings,
 } from '@/design-system/settings';
@@ -117,7 +118,9 @@ export default function Appearance() {
                     ? 'Saving to your account…'
                     : syncState === 'error'
                       ? 'Saved on this device only'
-                      : 'Synced to your account'
+                      : syncState === 'saved'
+                        ? 'Saved to your account'
+                        : 'Changes save automatically'
                   : 'Saved on this device'}
               </AppText>
               <AppText variant="caption" tone="muted">
@@ -299,7 +302,7 @@ function AccentGroup() {
             ))}
           </View>
           <AppText variant="caption" tone="muted" style={styles.note}>
-            Contrast is safeguarded automatically — labels on accent buttons pick black or white
+            Contrast is safeguarded automatically. Labels on accent buttons pick black or white
             for AA.
           </AppText>
         </View>
@@ -441,6 +444,7 @@ function MotionGroup() {
 
 function HapticsGroup() {
   const { settings, update } = useSettings();
+  const haptics = useHaptics();
   const supported = Platform.OS === 'ios' || Platform.OS === 'android';
   if (!supported) {
     return (
@@ -506,6 +510,18 @@ function HapticsGroup() {
           Turn on haptics to configure events.
         </AppText>
       ) : null}
+      <Button
+        label="Test haptics"
+        variant="secondary"
+        size="sm"
+        fullWidth={false}
+        onPress={() => haptics.tap()}
+        disabled={!settings.hapticsEnabled}
+      />
+      <AppText variant="caption" tone="muted">
+        Expo Go supports haptics. iOS may suppress them when system haptics are off, Silent Mode
+        is on, or Low Power Mode is active. Interface sounds are not implemented yet.
+      </AppText>
     </View>
   );
 }
@@ -526,17 +542,6 @@ function HomeGroup() {
         ]}
         value={settings.defaultTab}
         onChange={(v) => update({ defaultTab: v as AppearanceSettings['defaultTab'] })}
-      />
-      <Row
-        title="Interface sounds"
-        caption="Off by default — no sound effects ship with Correr yet."
-        control={
-          <Toggle
-            value={settings.soundsEnabled}
-            onValueChange={(v) => update({ soundsEnabled: v })}
-            accessibilityLabel="Interface sounds"
-          />
-        }
       />
     </View>
   );

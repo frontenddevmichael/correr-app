@@ -1,6 +1,12 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApi, useSession } from '@/api/ApiProvider';
@@ -18,6 +24,8 @@ import {
   VALIDATION_COPY,
 } from '@/core/validation';
 import {
+  AuthBack,
+  AuthWordmark,
   GoogleButton,
   LinkText,
   OrDivider,
@@ -40,6 +48,7 @@ export default function Login() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const submit = async () => {
     setError(null);
@@ -70,7 +79,7 @@ export default function Login() {
   };
 
   const onGoogle = async () => {
-    setBusy(true);
+    setGoogleBusy(true);
     try {
       await api.signInWithGoogle();
       await refresh();
@@ -78,7 +87,7 @@ export default function Login() {
     } catch (e) {
       toast.show(e instanceof Error ? e.message : 'Google sign-in failed.', { tone: 'error' });
     } finally {
-      setBusy(false);
+      setGoogleBusy(false);
     }
   };
 
@@ -88,10 +97,21 @@ export default function Login() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.body}>
-          <View style={styles.header}>
-            <AppText style={styles.title}>Welcome back.</AppText>
-            <AppText style={styles.subtitle}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.body}>
+            <AuthBack fallback="/(auth)/welcome" />
+            <View style={styles.top}>
+              <AuthWordmark />
+            </View>
+            <View style={styles.header}>
+            <AppText variant="display" center>
+              Welcome back.
+            </AppText>
+            <AppText variant="body" tone="secondary" center style={styles.subtitle}>
               Your vision is waiting. Let&apos;s keep moving.
             </AppText>
           </View>
@@ -166,19 +186,32 @@ export default function Login() {
           </View>
 
           {error ? (
-            <AppText style={[styles.error, { color: colors.textPrimary }]}>{error}</AppText>
+            <AppText variant="caption" tone="error" center>
+              {error}
+            </AppText>
           ) : null}
 
           <Button label="Log in" onPress={submit} loading={busy} />
 
           <OrDivider />
-          <GoogleButton onPress={onGoogle} />
+          <GoogleButton onPress={onGoogle} loading={googleBusy} disabled={busy} />
           <LinkText
             prefix="Don’t have an account?"
             link="Create one"
             onPress={() => router.replace('/(auth)/signup')}
           />
-        </View>
+          <Pressable
+            onPress={() => router.push('/legal')}
+            accessibilityRole="link"
+            accessibilityLabel="Read the Terms, Privacy Policy and AI Disclosure"
+            style={styles.legalLink}
+          >
+            <AppText variant="caption" tone="muted">
+              Terms, Privacy & AI Disclosure
+            </AppText>
+          </Pressable>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -187,30 +220,24 @@ export default function Login() {
 const styles = createThemedStyles((colors) => ({
   safe: { flex: 1 },
   flex: { flex: 1 },
-  body: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  body: {
     gap: spacing.xl,
+  },
+  top: {
+    alignItems: 'center',
   },
   header: {
     alignItems: 'center',
     gap: spacing.sm,
   },
-  title: {
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.9,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
   subtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textSecondary,
-    textAlign: 'center',
     maxWidth: 300,
   },
   form: { gap: spacing.lg },
@@ -237,9 +264,8 @@ const styles = createThemedStyles((colors) => ({
     fontFamily: 'Inter',
     fontSize: 16,
   },
-  error: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    textAlign: 'center',
+  legalLink: {
+    alignSelf: 'center',
+    paddingVertical: spacing.xs,
   },
 }));

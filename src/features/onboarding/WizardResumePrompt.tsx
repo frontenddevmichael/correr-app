@@ -79,7 +79,7 @@ export function WizardResumePrompt() {
         <PromptCard
           icon="compass"
           title="Name your vision"
-          body="One sentence about the future you're running toward — the AI draws the road."
+          body="One sentence about the future you're running toward. The AI draws the road."
           onPress={create}
           onDismiss={dismiss}
           dismissLabel="Dismiss vision prompt"

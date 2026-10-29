@@ -227,7 +227,7 @@ export default function NewVision() {
         </AppText>
         <AppText variant="body" tone="secondary">
           {editing
-            ? 'Change anything here — the roadmap stays intact.'
+            ? 'Change anything here. The roadmap stays intact.'
             : 'A clear sentence is enough. The roadmap comes next.'}
         </AppText>
       </View>

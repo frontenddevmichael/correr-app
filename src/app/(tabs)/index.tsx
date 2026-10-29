@@ -502,7 +502,7 @@ export default function Home() {
                   </AppText>
                 </View>
 
-                <Card variant="filled" padded={false} style={styles.timelineCard}>
+                <View style={styles.timelineCard}>
                   {dayCommitments.length === 0 ? (
                     <View style={styles.emptyRow}>
                       <View style={styles.emptyIcon}>
@@ -544,7 +544,7 @@ export default function Home() {
                       </AppText>
                     </View>
                   </Pressable>
-                </Card>
+                </View>
               </Reveal>
 
               <Reveal delay={140}>
@@ -554,10 +554,10 @@ export default function Home() {
                       <View
                         style={[
                           styles.checkCircleDark,
-                          { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.textPrimary },
+                          { backgroundColor: colors.textPrimary },
                         ]}
                       >
-                        <Icon name="check" size={17} color={colors.textPrimary} />
+                        <Icon name="check" size={17} color={colors.textInverse} />
                       </View>
                       <View style={styles.rowText}>
                         <AppText variant="overline" tone="muted">

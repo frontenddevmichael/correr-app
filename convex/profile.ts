@@ -101,6 +101,7 @@ export const update = mutation({
     timezone: v.optional(v.string()),
     avatarColor: v.optional(v.string()),
     bio: v.optional(v.string()),
+    focusAreas: v.optional(v.array(v.string())),
     appearance: v.optional(v.string()),
     onboardingState: v.optional(
       v.union(
@@ -116,6 +117,8 @@ export const update = mutation({
     ),
     notificationPrefs: v.optional(prefsValidator),
     coachingTone: v.optional(v.string()),
+    coachLength: v.optional(v.string()),
+    coachContext: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);

@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useApi, useSession } from '@/api/ApiProvider';
 import type { Circle, CirclePost } from '@/core/domain';
@@ -10,6 +10,7 @@ import type { BadgeTone } from '@/design-system/Badge';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
 import { Chip } from '@/design-system/Chip';
+import { useConfirm } from '@/design-system/confirm';
 import { EmptyState } from '@/design-system/EmptyState';
 import { Input } from '@/design-system/Input';
 import { Screen } from '@/design-system/Screen';
@@ -41,6 +42,7 @@ const KIND_TONES: Record<CirclePost['kind'], BadgeTone> = {
 /** Circle detail — feed of wins/check-ins with a composer (Phase 6). */
 export default function CircleDetail() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const { session } = useSession();
@@ -125,7 +127,7 @@ export default function CircleDetail() {
   };
 
   const leave = () => {
-    Alert.alert('Leave this circle?', 'You can rejoin anytime.', [
+    confirm('Leave this circle?', 'You can rejoin anytime.', [
       { text: 'Stay', style: 'cancel' },
       {
         text: 'Leave',
@@ -145,7 +147,7 @@ export default function CircleDetail() {
   };
 
   const removeCircle = () => {
-    Alert.alert(
+    confirm(
       'Delete this circle permanently?',
       'Every post, membership and shared goal in this circle will be deleted. This cannot be undone.',
       [
@@ -173,7 +175,7 @@ export default function CircleDetail() {
   };
 
   const removePost = (post: CirclePost) => {
-    Alert.alert(
+    confirm(
       'Delete this post?',
       'It will be removed from the circle feed. This cannot be undone.',
       [

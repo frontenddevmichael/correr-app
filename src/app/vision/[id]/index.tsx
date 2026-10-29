@@ -1,12 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
+import { friendlyErrorMessage } from '@/api/errorMessage';
 import type { Goal, Milestone, Vision } from '@/core/domain';
 import { BrandMark } from '@/design-system/BrandMark';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
+import { useConfirm } from '@/design-system/confirm';
 import { Icon } from '@/design-system/icons';
 import { PopIn, Reveal } from '@/design-system/motion';
 import { ProgressBar } from '@/design-system/ProgressBar';
@@ -121,6 +123,7 @@ function MilestoneRow({
 /** Vision detail — the future, its reason, and the ladder of milestones. */
 export default function VisionDetail() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -128,30 +131,48 @@ export default function VisionDetail() {
   const [goals, setGoals] = useState<GoalWithMilestones[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [v, g] = await Promise.all([api.getVision(id), api.listGoals(id)]);
-    const withMilestones = await Promise.all(
-      g.map(async (goal) => ({ goal, milestones: await api.listMilestones(goal.id) })),
-    );
-    setVision(v);
-    setGoals(withMilestones);
-    setLoading(false);
+    try {
+      const [v, g] = await Promise.all([api.getVision(id), api.listGoals(id)]);
+      const withMilestones = await Promise.all(
+        g.map(async (goal) => ({ goal, milestones: await api.listMilestones(goal.id) })),
+      );
+      setVision(v);
+      setGoals(withMilestones);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(friendlyErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }, [api, id]);
+
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([api.getVision(id), api.listGoals(id)])
-      .then(async ([v, g]) => {
+    (async () => {
+      try {
+        const [v, g] = await Promise.all([api.getVision(id), api.listGoals(id)]);
         const withMilestones = await Promise.all(
           g.map(async (goal) => ({ goal, milestones: await api.listMilestones(goal.id) })),
         );
         if (!mounted) return;
         setVision(v);
         setGoals(withMilestones);
-        setLoading(false);
-      })
-      .catch(() => {});
+        setLoadError(null);
+      } catch (err) {
+        if (mounted) setLoadError(friendlyErrorMessage(err));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
     return () => {
       mounted = false;
     };
@@ -173,7 +194,7 @@ export default function VisionDetail() {
   };
 
   const archive = () => {
-    Alert.alert('Archive this vision?', 'It stays in your history — you can restore it later.', [
+    confirm('Archive this vision?', 'It stays in your history. You can restore it later.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Archive',
@@ -209,7 +230,7 @@ export default function VisionDetail() {
   };
 
   const removeGoal = (goal: Goal) => {
-    Alert.alert(
+    confirm(
       'Delete this goal?',
       `“${goal.title}” and its milestones will be removed. This cannot be undone.`,
       [
@@ -237,7 +258,7 @@ export default function VisionDetail() {
   };
 
   const removeVision = () => {
-    Alert.alert(
+    confirm(
       'Delete this vision permanently?',
       'Its goals, milestones and discovery answers will be deleted. Commitments stay in your history but lose their link to this vision. This cannot be undone.',
       [
@@ -281,14 +302,27 @@ export default function VisionDetail() {
     return (
       <Screen back="push" title="Vision">
         <Card variant="muted" style={styles.missing}>
-          <AppText variant="h3">Vision not found.</AppText>
-          <Button
-            label="Back to visions"
-            variant="secondary"
-            size="sm"
-            onPress={() => router.replace('/(tabs)/vision')}
-            style={styles.missingBtn}
-          />
+          <AppText variant="h3">
+            {loadError ? "Couldn’t load this vision." : 'Vision not found.'}
+          </AppText>
+          {loadError ? <AppText variant="caption" tone="secondary">{loadError}</AppText> : null}
+          {loadError ? (
+            <Button
+              label="Try again"
+              variant="secondary"
+              size="sm"
+              onPress={retryLoad}
+              style={styles.missingBtn}
+            />
+          ) : (
+            <Button
+              label="Back to visions"
+              variant="secondary"
+              size="sm"
+              onPress={() => router.replace('/(tabs)/vision')}
+              style={styles.missingBtn}
+            />
+          )}
         </Card>
       </Screen>
     );

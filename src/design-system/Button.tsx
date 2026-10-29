@@ -121,11 +121,13 @@ export function Button({
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled, busy: loading }}
-        // RNW 0.21 ignores accessibilityState on Pressable — mirror to aria-* for web.
-        {...({
-          'aria-disabled': isDisabled,
-          'aria-busy': loading,
-        } as Record<string, boolean>)}
+        // RNW 0.21 derives `aria-disabled` and `tabindex` from Pressable's own
+        // `disabled` prop and overrides any spread `aria-disabled` (QA-026/
+        // QA-028: opacity-only disabled state stayed focusable and silent), so
+        // pass it natively — RN's Pressable honours the same prop. `aria-busy`
+        // still needs the web mirror.
+        disabled={isDisabled}
+        {...({ 'aria-busy': loading } as Record<string, boolean>)}
         onPress={
           isDisabled
             ? undefined

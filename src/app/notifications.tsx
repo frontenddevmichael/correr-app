@@ -230,7 +230,22 @@ export default function Notifications() {
     }
   };
 
+  const clearRead = async () => {
+    if (!items.some((n) => n.readAt)) return;
+    setBusy(true);
+    try {
+      await api.clearRead();
+      setItems((prev) => prev.filter((n) => !n.readAt));
+      toast.show('Read notifications cleared.', { tone: 'success' });
+    } catch {
+      toast.show('Could not clear read notifications.', { tone: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const unread = items.filter((n) => !n.readAt).length;
+  const hasRead = items.some((n) => n.readAt);
 
   if (loading) {
     return (
@@ -313,6 +328,19 @@ export default function Notifications() {
         </Card>
       ) : null}
 
+      {hasRead ? (
+        <View style={styles.listActions}>
+          <Button
+            label="Clear read"
+            variant="ghost"
+            size="sm"
+            fullWidth={false}
+            onPress={clearRead}
+            loading={busy}
+          />
+        </View>
+      ) : null}
+
       {items.map((n) => (
         <Pressable
           key={n.id}
@@ -324,19 +352,19 @@ export default function Notifications() {
         >
           {({ pressed }) => (
             <Card
-              variant={n.readAt ? 'outlined' : 'filled'}
+              variant="outlined"
               style={[
                 styles.item,
                 {
                   ...(!n.readAt
-                    ? { borderLeftWidth: 3, borderLeftColor: colors.textPrimary }
+                    ? { borderLeftWidth: 2, borderLeftColor: colors.textPrimary }
                     : {}),
                   ...(pressed ? { backgroundColor: colors.surfaceSunken } : {}),
                 },
               ]}
             >
               <View style={styles.itemHeader}>
-                <Badge label={KIND_LABELS[n.kind]} tone={KIND_TONES[n.kind]} dot={!n.readAt} />
+                <Badge label={KIND_LABELS[n.kind]} tone={KIND_TONES[n.kind]} />
                 <AppText variant="caption" tone="muted">
                   {formatWhen(n.createdAt)}
                 </AppText>
@@ -344,7 +372,7 @@ export default function Notifications() {
               <AppText variant="bodyBold" tone={n.readAt ? 'secondary' : 'primary'}>
                 {n.title}
               </AppText>
-              <AppText variant="caption" tone="secondary">
+              <AppText variant="body" tone="secondary" style={styles.itemBody}>
                 {n.body}
               </AppText>
             </Card>
@@ -398,8 +426,17 @@ const styles = StyleSheet.create({
   emptyTitle: {
     letterSpacing: -0.5,
   },
+  listActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: -spacing.sm,
+  },
   item: {
     gap: spacing.xs,
+    paddingVertical: spacing.lg,
+  },
+  itemBody: {
+    lineHeight: 20,
   },
   itemHeader: {
     flexDirection: 'row',

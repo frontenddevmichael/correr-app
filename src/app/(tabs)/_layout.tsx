@@ -32,6 +32,10 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
+        // The Coach composer needs the full bottom edge while the keyboard is
+        // up. Hiding the floating capsule prevents it from sitting on top of
+        // the input on devices with a large home-indicator inset.
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />

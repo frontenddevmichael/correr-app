@@ -1,11 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useApi, useSession } from '@/api/ApiProvider';
 import { convexEnabled } from '@/api/convexClient';
 import type { NotificationKind } from '@/core/domain';
 import { Card } from '@/design-system/Card';
+import { useConfirm } from '@/design-system/confirm';
 import { Icon } from '@/design-system/icons';
 import { MotionPressable, Reveal } from '@/design-system/motion';
 import { Screen } from '@/design-system/Screen';
@@ -87,6 +88,7 @@ function formatHour(hhmm: string): string {
 
 export default function Settings() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const { profile, refresh, invalidate } = useSession();
   const [busy, setBusy] = useState(false);
@@ -110,7 +112,7 @@ export default function Settings() {
   );
 
   const onResetDemo = useCallback(() => {
-    Alert.alert(
+    confirm(
       'Reset demo data?',
       'This clears local commitments, visions and progress and restores the seed demo content.',
       [
@@ -131,7 +133,7 @@ export default function Settings() {
         },
       ],
     );
-  }, [api, invalidate, refresh]);
+  }, [api, confirm, invalidate, refresh]);
 
   return (
     <Screen
@@ -172,11 +174,20 @@ export default function Settings() {
               {enabledCount}/{NOTIF_ROWS.length} on
             </AppText>
           </View>
-          {prefs?.dailyCheckIn ? (
-            <AppText variant="caption" tone="muted" style={styles.checkInLine}>
-              Daily check-in window · {formatHour(prefs.dailyCheckInWindow)}
-            </AppText>
-          ) : null}
+          <MotionPressable
+            onPress={() => router.push('/check-in-time')}
+            accessibilityLabel="Daily check-in time"
+          >
+            <View style={styles.scheduleRow}>
+              <View style={styles.notifText}>
+                <AppText variant="bodyMedium">Daily check-in time</AppText>
+                <AppText variant="caption" tone="secondary">
+                  {prefs ? `Currently ${formatHour(prefs.dailyCheckInWindow)}` : 'Choose a time'}
+                </AppText>
+              </View>
+              <Icon name="chevronRight" size={16} color={colors.textMuted} />
+            </View>
+          </MotionPressable>
           <View>
             {NOTIF_ROWS.map((row) => (
               <View key={row.key} style={styles.notifRow}>
@@ -197,22 +208,20 @@ export default function Settings() {
         </Card>
       </Reveal>
 
-      <Reveal delay={200}>
-        <Card variant="outlined" padded={false}>
-          <View style={styles.accountHeader}>
-            <AppText variant="overline" tone="muted">
-              Account
-            </AppText>
-          </View>
-          {!convexEnabled ? (
+      {!convexEnabled ? (
+        <Reveal delay={200}>
+          <Card variant="outlined" padded={false}>
+            <View style={styles.accountHeader}>
+              <AppText variant="overline" tone="muted">
+                Developer
+              </AppText>
+            </View>
             <MotionPressable
               onPress={onResetDemo}
               disabled={busy}
               accessibilityLabel="Reset local demo data"
             >
-              <View
-                style={styles.accountRow}
-              >
+              <View style={styles.accountRow}>
                 <View style={[styles.accountIcon, { backgroundColor: colors.surfaceSunken }]}>
                   <Icon name="refresh" size={16} color={colors.textSecondary} />
                 </View>
@@ -225,23 +234,9 @@ export default function Settings() {
                 <Icon name="chevronRight" size={16} color={colors.textMuted} />
               </View>
             </MotionPressable>
-          ) : null}
-          <MotionPressable onPress={() => router.push('/account')} accessibilityLabel="Open account">
-            <View style={styles.accountRow}>
-              <View style={[styles.accountIcon, { backgroundColor: colors.surfaceSunken }]}>
-                <Icon name="person" size={16} color={colors.textSecondary} />
-              </View>
-              <View style={styles.accountText}>
-                <AppText variant="bodyMedium">Account</AppText>
-                <AppText variant="caption" tone="muted">
-                  Profile, explore and sign out
-                </AppText>
-              </View>
-              <Icon name="chevronRight" size={16} color={colors.textMuted} />
-            </View>
-          </MotionPressable>
-        </Card>
-      </Reveal>
+          </Card>
+        </Reveal>
+      ) : null}
 
       <Reveal delay={260}>
         <View style={styles.about}>
@@ -268,7 +263,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
   },
-  checkInLine: {
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
     marginBottom: spacing.xs,
   },
   cardHeader: {

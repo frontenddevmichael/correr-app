@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
+import { friendlyErrorMessage } from '@/api/errorMessage';
 import { formatMonthDay } from '@/core/dates';
 import type { Subscription } from '@/core/domain';
 import { Badge } from '@/design-system/Badge';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
+import { useConfirm } from '@/design-system/confirm';
 import { Screen } from '@/design-system/Screen';
 import { Skeleton } from '@/design-system/Skeleton';
 import { Icon } from '@/design-system/icons';
@@ -35,6 +37,7 @@ const PRO_FEATURES = [
 /** Billing (Phase 8) — mock checkout until real payments are configured. */
 export default function Pricing() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const [sub, setSub] = useState<Subscription | null>(null);
@@ -49,9 +52,16 @@ export default function Pricing() {
       .then((s) => {
         if (!active) return;
         setSub(s);
-        setLoading(false);
+        setError(null);
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (!active) return;
+        setError(friendlyErrorMessage(err));
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -76,7 +86,7 @@ export default function Pricing() {
   };
 
   const cancel = () => {
-    Alert.alert(
+    confirm(
       'Cancel Pro?',
       'You keep Pro until the end of the current period. You can re-subscribe anytime.',
       [
@@ -100,7 +110,7 @@ export default function Pricing() {
   return (
     <Screen back="close"
       title="Correr Pro"
-      subtitle="Run free forever — Pro removes the limits when your vision needs them."
+      subtitle="Run free forever. Pro removes the limits when your vision needs them."
     >
       <Card variant="dark" style={styles.statusCard}>
         <View style={styles.statusRow}>
@@ -186,7 +196,7 @@ export default function Pricing() {
       ) : null}
 
       <AppText variant="caption" tone="muted" center>
-        Demo billing — no real charge. Stripe plugs in behind this same screen.
+        Demo billing. No real charge. Stripe plugs in behind this same screen.
       </AppText>
     </Screen>
   );

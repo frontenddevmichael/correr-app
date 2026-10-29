@@ -66,7 +66,7 @@ export default function WeeklyReview() {
   return (
     <Screen back="push"
       title="Weekly review."
-      subtitle="Three honest questions. +15 XP, and the pattern gets clearer every week."
+      subtitle="Four quick questions. +15 XP, and the pattern gets clearer every week."
     >
       <View style={styles.form}>
         <View>
@@ -125,7 +125,9 @@ export default function WeeklyReview() {
         </AppText>
 
         {error ? (
-          <AppText variant="caption" tone="error">
+          // role="alert" so validation failures reach screen readers
+          // immediately instead of appearing visually only (QA-024).
+          <AppText variant="caption" tone="error" role="alert">
             {error}
           </AppText>
         ) : null}

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 
 import { useApi, useSession } from '@/api/ApiProvider';
@@ -9,6 +9,7 @@ import { Avatar } from '@/design-system/Avatar';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
 import { Chip } from '@/design-system/Chip';
+import { useConfirm } from '@/design-system/confirm';
 import { Icon, type IconName } from '@/design-system/icons';
 import { Input } from '@/design-system/Input';
 import { Reveal } from '@/design-system/motion';
@@ -49,6 +50,7 @@ const QUICK_MESSAGES: {
 /** Accountability tab — partner first, then shared commitments and safety. */
 export default function Accountability() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const { session } = useSession();
@@ -150,7 +152,7 @@ export default function Accountability() {
   };
 
   const endPartnership = () => {
-    Alert.alert(
+    confirm(
       'End partnership?',
       'Your shared commitments stay with you. You can invite a partner again anytime.',
       [
@@ -176,7 +178,7 @@ export default function Accountability() {
 
   const block = () => {
     if (!partner) return;
-    Alert.alert('Block this partner?', 'They lose access to you and vice versa.', [
+    confirm('Block this partner?', 'They lose access to you and vice versa.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Block',
@@ -464,12 +466,14 @@ export default function Accountability() {
             </View>
           </Card>
         </Reveal>
-        <Button
-          label="Simulate partner accepting (demo)"
-          variant="secondary"
-          onPress={connectDemo}
-          loading={busy}
-        />
+        {__DEV__ ? (
+          <Button
+            label="Simulate partner accepting (demo)"
+            variant="secondary"
+            onPress={connectDemo}
+            loading={busy}
+          />
+        ) : null}
         <Button
           label="Cancel invite"
           variant="ghost"

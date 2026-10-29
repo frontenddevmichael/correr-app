@@ -46,6 +46,14 @@ export const createInvite = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
+    // One live invitation per user: reuse the existing pending invite (same
+    // code) instead of stacking duplicates, and refuse once a partnership is
+    // already active. Replayed/double-tapped calls are therefore idempotent.
+    const existing = await activePartnership(ctx, userId as string);
+    if (existing?.status === "pending") return existing;
+    if (existing) {
+      throw new Error("You already have an active partnership.");
+    }
     const ts = nowIso();
     const id = await ctx.db.insert("partnerships", {
       initiatorId: userId,
@@ -74,6 +82,28 @@ export const acceptInvite = mutation({
     }
     if (pending.initiatorId === userId) {
       throw new Error("That’s your own invite code.");
+    }
+    if (pending.partnerId) {
+      throw new Error("That invite code has already been used.");
+    }
+    // One partnership per user: block a second active pairing, and cancel the
+    // invitee's own stale outgoing invites so they can't shadow this one later
+    // (activePartnership() returns the first non-ended row it finds).
+    const asInitiator = await ctx.db
+      .query("partnerships")
+      .withIndex("by_initiator", (q) => q.eq("initiatorId", userId))
+      .collect();
+    const asPartner = await ctx.db
+      .query("partnerships")
+      .withIndex("by_partner", (q) => q.eq("partnerId", userId))
+      .collect();
+    if ([...asInitiator, ...asPartner].some((p) => p.status === "active")) {
+      throw new Error("You already have an active partnership.");
+    }
+    for (const own of asInitiator) {
+      if (own.status === "pending") {
+        await ctx.db.patch(own._id, { status: "ended", endedAt: nowIso() });
+      }
     }
     await ctx.db.patch(pending._id, {
       partnerId: userId,

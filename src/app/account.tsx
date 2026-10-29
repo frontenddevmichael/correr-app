@@ -1,11 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Platform, Share, StyleSheet, View } from 'react-native';
+import { Platform, Share, StyleSheet, View } from 'react-native';
 
 import { useApi, useSession } from '@/api/ApiProvider';
+import { CONSENT_VERSION } from '@/core/domain';
 import { Avatar } from '@/design-system/Avatar';
 import { Badge } from '@/design-system/Badge';
 import { Card } from '@/design-system/Card';
+import { useConfirm } from '@/design-system/confirm';
 import { Icon, type IconName } from '@/design-system/icons';
 import { MotionPressable, Reveal } from '@/design-system/motion';
 import { Screen } from '@/design-system/Screen';
@@ -51,6 +53,7 @@ const EXPLORE: ExploreRow[] = [
 
 export default function Account() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const { session, profile, refresh } = useSession();
@@ -65,6 +68,7 @@ export default function Account() {
   const name = profile?.displayName ?? 'Runner';
   const level = profile?.level ?? 'Starter';
   const xp = profile?.xp ?? 0;
+  const legalCurrent = profile?.consentVersion === CONSENT_VERSION;
 
   // ---------- data export (GDPR/NDPR art. 15/20 + Apple requirement) ----------
   const onExportData = async () => {
@@ -81,7 +85,7 @@ export default function Account() {
           await nav.clipboard.writeText(json);
           toast.show('Export copied to your clipboard.', { tone: 'success' });
         } else {
-          toast.show('This browser blocked clipboard access — try a native build.', {
+          toast.show('This browser blocked clipboard access. Try a native build.', {
             tone: 'error',
           });
         }
@@ -100,7 +104,7 @@ export default function Account() {
   // ---------- account deletion (Apple requires this in-app) ----------
   const onDeleteAccount = () => {
     if (busy) return;
-    Alert.alert(
+    confirm(
       'Delete your account?',
       'This permanently removes your profile, visions, roadmap, commitments, messages and progress. This cannot be undone.',
       [
@@ -131,16 +135,27 @@ export default function Account() {
   };
 
   const tiles: QuickTile[] = [
-    { title: 'Partner', caption: 'Accountability', icon: 'people', route: push('/accountability') },
-    { title: 'Wallet', caption: 'Correr Pro', icon: 'wallet', route: push('/pricing') },
-    { title: 'Activity', caption: 'Your progress', icon: 'chart', route: push('/(tabs)/progress') },
+    {
+      title: 'Profile',
+      caption: 'What your coach knows',
+      icon: 'person',
+      route: push('/(onboarding)/profile-setup'),
+    },
+    {
+      title: 'Notifications',
+      caption: 'Updates and check-ins',
+      icon: 'bell',
+      route: push('/notifications'),
+    },
+    {
+      title: 'Settings',
+      caption: 'Appearance and reminders',
+      icon: 'gear',
+      route: push('/settings'),
+    },
   ];
 
   const rows: ListRow[] = [
-    { title: 'Settings', caption: 'Appearance, notifications, account', icon: 'gear', route: push('/settings') },
-    { title: 'Messages', caption: 'Coach & partner activity', icon: 'inbox', route: push('/notifications') },
-    { title: 'Edit profile', caption: 'Name, timezone, reminders', icon: 'person', route: push('/(onboarding)/profile-setup') },
-    { title: 'Legal', caption: 'Privacy, terms & disclosures', icon: 'doc', route: push('/legal') },
     { title: 'Export my data', caption: busy ? 'Preparing…' : 'Download everything we store about you', icon: 'send', route: () => void onExportData() },
     {
       title: 'Delete account',
@@ -210,11 +225,17 @@ export default function Account() {
                 </AppText>
               ) : null}
             </View>
-            {/* Onboarding answers (focus areas + coach style) land here via the bio. */}
             {profile?.bio ? (
               <AppText variant="caption" tone="secondary" numberOfLines={2}>
                 {profile.bio}
               </AppText>
+            ) : null}
+            {profile?.focusAreas?.length ? (
+              <View style={styles.focusRow}>
+                {profile.focusAreas.slice(0, 4).map((area) => (
+                  <Badge key={area} label={area} tone="neutral" />
+                ))}
+              </View>
             ) : null}
           </View>
           <Avatar name={name} size={64} />
@@ -248,13 +269,22 @@ export default function Account() {
 
       {/* Privacy card */}
       <Reveal delay={120}>
-        <MotionPressable onPress={push('/legal')} accessibilityLabel="Privacy checkup. Review your privacy settings.">
+        <MotionPressable
+          onPress={push('/legal')}
+          accessibilityLabel="Privacy and legal. Read the privacy policy, terms and AI disclosure."
+        >
           <Card variant="filled" style={styles.privacy}>
             <View style={styles.privacyText}>
-              <AppText variant="h3">Privacy checkup</AppText>
+              <AppText variant="h3">Privacy and legal</AppText>
               <AppText variant="caption" tone="secondary">
-                Review what Correr stores, and control your data in a few short steps.
+                {legalCurrent
+                  ? 'Your agreement is current. Read what Correr stores and how AI is used.'
+                  : 'The terms have changed. Review the current Terms, Privacy Policy and AI Disclosure.'}
               </AppText>
+              <Badge
+                label={legalCurrent ? 'Current' : 'Review'}
+                tone={legalCurrent ? 'progress' : 'info'}
+              />
             </View>
             <View style={[styles.privacyArt, { backgroundColor: colors.surfaceSunken }]}>
               <Icon name="shield" size={30} color={colors.textSecondary} />
@@ -294,34 +324,43 @@ export default function Account() {
         </View>
       </Reveal>
 
-      {/* Settings list */}
+      {/* Data controls */}
       <Reveal delay={180}>
-        <Card variant="outlined" padded={false}>
-          {rows.map((row) => (
-            <MotionPressable key={row.title} onPress={row.route} accessibilityLabel={row.title}>
-              <View style={styles.row}>
-                <View style={[styles.rowIcon, { backgroundColor: colors.surfaceSunken }]}>
-                  <Icon
-                    name={row.icon}
-                    size={18}
-                    color={row.danger ? colors.error : colors.textSecondary}
-                  />
-                </View>
-                <View style={styles.rowText}>
-                  <AppText variant="bodyMedium" tone={row.danger ? 'error' : 'primary'}>
-                    {row.title}
-                  </AppText>
-                  {row.caption ? (
-                    <AppText variant="caption" tone="muted">
-                      {row.caption}
+        <View style={styles.section}>
+          <AppText variant="overline" tone="muted" style={styles.sectionLabel}>
+            Your data
+          </AppText>
+          <Card variant="outlined" padded={false}>
+            {rows.map((row) => (
+              <MotionPressable
+                key={row.title}
+                onPress={row.route}
+                accessibilityLabel={row.title}
+              >
+                <View style={styles.row}>
+                  <View style={[styles.rowIcon, { backgroundColor: colors.surfaceSunken }]}>
+                    <Icon
+                      name={row.icon}
+                      size={18}
+                      color={row.danger ? colors.error : colors.textSecondary}
+                    />
+                  </View>
+                  <View style={styles.rowText}>
+                    <AppText variant="bodyMedium" tone={row.danger ? 'error' : 'primary'}>
+                      {row.title}
                     </AppText>
-                  ) : null}
+                    {row.caption ? (
+                      <AppText variant="caption" tone="muted">
+                        {row.caption}
+                      </AppText>
+                    ) : null}
+                  </View>
+                  <Icon name="chevronRight" size={17} color={colors.textMuted} />
                 </View>
-                <Icon name="chevronRight" size={17} color={colors.textMuted} />
-              </View>
-            </MotionPressable>
-          ))}
-        </Card>
+              </MotionPressable>
+            ))}
+          </Card>
+        </View>
       </Reveal>
 
       {/* Sign out */}
@@ -366,6 +405,11 @@ const styles = StyleSheet.create({
   },
   email: {
     flexShrink: 1,
+  },
+  focusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   tiles: {
     flexDirection: 'row',

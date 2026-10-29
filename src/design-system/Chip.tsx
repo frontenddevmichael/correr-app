@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { Icon, type IconName } from './icons';
-import { useControlHeight } from './settings';
+import { useControlHeight, useHaptics } from './settings';
 import { useColors } from './theme';
 import { radii, spacing } from './tokens';
 import { AppText } from './typography';
@@ -33,6 +33,7 @@ export function Chip({
 }: ChipProps) {
   const colors = useColors();
   const controlHeight = useControlHeight();
+  const haptics = useHaptics();
   const accent = tone === 'ai' ? colors.accent : colors.brand;
   const fg = selected ? colors.textInverse : colors.textSecondary;
 
@@ -40,7 +41,14 @@ export function Chip({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
-      onPress={disabled ? undefined : onPress}
+      onPress={
+        disabled
+          ? undefined
+          : () => {
+              haptics.tap();
+              onPress?.();
+            }
+      }
       style={({ pressed }) => [
         styles.chip,
         { minHeight: controlHeight(44) },

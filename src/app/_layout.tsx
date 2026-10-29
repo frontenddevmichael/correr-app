@@ -4,10 +4,11 @@ import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { View, useColorScheme } from 'react-native';
+import { Platform, StyleSheet, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ApiProvider } from '@/api/ApiProvider';
+import { ConfirmProvider } from '@/design-system/confirm';
 import { authStorage } from '@/api/authStorage';
 import { convexClient, convexEnabled } from '@/api/convexClient';
 import { useLoadFonts } from '@/design-system/fonts';
@@ -19,6 +20,10 @@ import { AppText } from '@/design-system/typography';
 import { spacing } from '@/design-system/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+// Keep the native splash up until fonts and appearance are ready, then fade
+// rather than cutting. The image itself is the supplied mark on a transparent
+// field, so it appears immediately on both light and dark system themes.
+SplashScreen.setOptions({ duration: 250, fade: true });
 
 /**
  * Branded boot view shown while fonts load. The native OS splash covers
@@ -32,22 +37,27 @@ const BOOT_SPLASH = {
   dark: { background: '#0D0C0A', icon: require('@/assets/images/splash-icon-dark.png') },
 } as const;
 
+const bootStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mark: {
+    width: 140,
+    height: 140,
+  },
+});
+
 function BootSplash() {
   const system = useColorScheme();
   const splash = system === 'dark' ? BOOT_SPLASH.dark : BOOT_SPLASH.light;
 
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: splash.background,
-      }}
-    >
+    <View style={[bootStyles.root, { backgroundColor: splash.background }]}>
       <Image
         source={splash.icon}
-        style={{ width: 140, height: 140 }}
+        style={bootStyles.mark}
         contentFit="contain"
         accessibilityLabel="Correr"
       />
@@ -82,8 +92,9 @@ function RootNavigator() {
         <Stack.Screen name="notifications" options={{ presentation: 'modal', animation: 'fade' }} />
         <Stack.Screen name="account" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="coach-settings" />
+        <Stack.Screen name="check-in-time" />
         <Stack.Screen name="appearance" />
-        <Stack.Screen name="legal" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="pricing" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="campus" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       </Stack>
@@ -107,6 +118,25 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
 
+  // Expo Router owns the browser URL. Without this, Convex Auth's default
+  // `history.replaceState` can be undone by the router, leaving `?code=` in
+  // place and letting the provider process the same one-time code twice. The
+  // second exchange fails with "Invalid verification code" and clears the
+  // session that the first exchange just established.
+  const replaceURL = React.useCallback((relativeUrl: string) => {
+    if (Platform.OS !== 'web') return;
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code) {
+      // ConvexAuthProvider already consumed the one-time code before calling
+      // us. Strip it from the address bar immediately (QA-004: never log or
+      // re-expose it) and keep it out of history, then let the router settle
+      // on `relativeUrl`.
+      const clean = `${window.location.origin}${window.location.pathname}`;
+      window.history.replaceState(window.history.state, '', clean);
+    }
+    router.replace(relativeUrl as Parameters<typeof router.replace>[0]);
+  }, []);
+
   if (!fontsLoaded || !settingsReady) {
     return <BootSplash />;
   }
@@ -117,9 +147,11 @@ export default function RootLayout() {
     <AppearanceProvider>
       <ThemeProvider>
         <ToastProvider>
-          <ApiProvider>
-            <RootNavigator />
-          </ApiProvider>
+          <ConfirmProvider>
+            <ApiProvider>
+              <RootNavigator />
+            </ApiProvider>
+          </ConfirmProvider>
         </ToastProvider>
       </ThemeProvider>
     </AppearanceProvider>
@@ -130,7 +162,11 @@ export default function RootLayout() {
       {convexEnabled && convexClient ? (
         // Owns the auth token handshake and authenticates the shared client
         // for both Convex hooks and the promise-based API adapter.
-        <ConvexAuthProvider client={convexClient} storage={authStorage}>
+        <ConvexAuthProvider
+          client={convexClient}
+          storage={authStorage}
+          replaceURL={replaceURL}
+        >
           {content}
         </ConvexAuthProvider>
       ) : (
@@ -168,7 +204,7 @@ function CrashScreen({ error, retry }: { error: Error; retry: () => Promise<void
         center
         style={{ maxWidth: 320, lineHeight: 24 }}
       >
-        The app hit an unexpected error. Your saved data is safe — try again, or head back to
+        The app hit an unexpected error. Your saved data is safe. Try again, or head back to
         home.
       </AppText>
       <Button

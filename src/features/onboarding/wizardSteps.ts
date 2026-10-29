@@ -80,6 +80,8 @@ export interface ChipsStep extends BaseStep {
   options: ChoiceOption[];
   /** 0 means "optional — Continue is always allowed". */
   min: number;
+  /** Renders a free-text field for an answer the presets miss. */
+  allowCustom?: boolean;
 }
 
 export interface VisionStep extends BaseStep {
@@ -115,6 +117,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     subtitle: 'Pick at least one. This shapes what you see first.',
     groupLabel: 'Your focus areas',
     min: 1,
+    allowCustom: true,
     options: [
       { label: 'Career growth' },
       { label: 'Health & fitness' },
@@ -131,7 +134,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     kind: 'choice',
     field: 'checkInTime',
     title: 'When should your daily check-in land?',
-    subtitle: 'One honest question, at a time that suits your day.',
+    subtitle: 'Pick a preset or set your own time between 5:00 AM and 11:00 PM.',
     options: [
       { label: 'Morning', caption: '7:00 AM', value: '07:00' },
       { label: 'Midday', caption: '12:00 PM', value: '12:00' },
@@ -148,7 +151,7 @@ export const WIZARD_STEPS: WizardStep[] = [
     options: [
       { label: 'Warm & encouraging', value: 'warm' },
       { label: 'Direct & honest', value: 'direct' },
-      { label: 'Curious — asks questions', value: 'socratic' },
+      { label: 'Curious, asks questions', value: 'socratic' },
     ],
   },
   {

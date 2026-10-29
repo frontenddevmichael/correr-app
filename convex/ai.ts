@@ -134,6 +134,11 @@ export const loadChatContext = internalQuery({
     return {
       kind: convo.kind,
       tone: profile?.coachingTone,
+      length: profile?.coachLength,
+      userContext: profile?.coachContext,
+      displayName: profile?.displayName,
+      bio: profile?.bio,
+      focusAreas: profile?.focusAreas,
       vision: visionDoc,
       todayCommitments: commitments.filter(
         (c) => c.dueAt.slice(0, 10) === day && c.state !== "cancelled",
@@ -217,6 +222,11 @@ export const sendMessage = action({
       kind: loaded.kind,
       userMessage: message,
       tone: loaded.tone,
+      length: loaded.length,
+      userContext: loaded.userContext,
+      displayName: loaded.displayName,
+      bio: loaded.bio,
+      focusAreas: loaded.focusAreas,
       vision: loaded.vision
         ? ({ ...loaded.vision, id: loaded.vision._id } as Vision)
         : undefined,

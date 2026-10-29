@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
+  Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -12,67 +12,186 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApi } from '@/api/ApiProvider';
 import type { AIConversation, AIMessage } from '@/core/domain';
 import { track } from '@/core/analytics';
 import { BrandMark } from '@/design-system/BrandMark';
+import { useConfirm } from '@/design-system/confirm';
 import { Icon } from '@/design-system/icons';
 import { Reveal, useReducedMotion } from '@/design-system/motion';
+import { useHaptics } from '@/design-system/settings';
 import { Skeleton } from '@/design-system/Skeleton';
 import { useColors } from '@/design-system/theme';
 import { fontFamily, layout, radii, shadows, spacing } from '@/design-system/tokens';
 import { AppText } from '@/design-system/typography';
 import { LIMITS } from '@/core/validation';
 
-
-function TypingDots() {
+/**
+ * A calm thinking state: the brand mark breathes inside one soft ring.
+ * No bouncing dots, no progress copy.
+ */
+function ThinkingOrb() {
   const colors = useColors();
   const reduced = useReducedMotion();
-  const [dots] = useState(() => [
-    new Animated.Value(0.3),
-    new Animated.Value(0.3),
-    new Animated.Value(0.3),
-  ]);
+  const pulse = useSharedValue(0);
 
   useEffect(() => {
     if (reduced) {
-      dots.forEach((dot) => dot.setValue(0.7));
+      pulse.value = 0.5;
       return;
     }
-    const loops = dots.map((dot, index) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(index * 120),
-          Animated.timing(dot, {
-            toValue: 1,
-            duration: 320,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot, {
-            toValue: 0.3,
-            duration: 320,
-            useNativeDriver: true,
-          }),
-          Animated.delay(220),
-        ]),
-      ),
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
     );
-    loops.forEach((loop) => loop.start());
-    return () => loops.forEach((loop) => loop.stop());
-  }, [dots, reduced]);
+    return () => cancelAnimation(pulse);
+  }, [pulse, reduced]);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.2, 0.04]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.92, 1.5]) }],
+  }));
+  const coreStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.72, 1]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.96, 1.04]) }],
+  }));
 
   return (
-    <View style={styles.typing}>
-      {dots.map((dot, index) => (
-        <Animated.View
-          key={index}
-          style={[styles.typingDot, { backgroundColor: colors.textSecondary, opacity: dot }]}
-        />
-      ))}
+    <View style={styles.thinking} accessibilityLabel="Coach is thinking">
+      <Animated.View
+        style={[
+          styles.thinkingRing,
+          { borderColor: colors.textMuted },
+          ringStyle,
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.thinkingCore,
+          { backgroundColor: colors.surfaceSunken },
+          coreStyle,
+        ]}
+      >
+        <BrandMark size={16} />
+      </Animated.View>
     </View>
   );
+}
+
+function AnimatedWord({
+  text,
+  index,
+  animate,
+  color,
+}: {
+  text: string;
+  index: number;
+  animate: boolean;
+  color: string;
+}) {
+  const reduced = useReducedMotion();
+  const progress = useSharedValue(animate && !reduced ? 0 : 1);
+
+  useEffect(() => {
+    if (!animate || reduced) {
+      progress.value = 1;
+      return;
+    }
+    progress.value = withDelay(
+      Math.min(index * 18, 320),
+      withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) }),
+    );
+    return () => cancelAnimation(progress);
+  }, [animate, index, progress, reduced]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [6, 0]) },
+      { scale: interpolate(progress.value, [0, 1], [0.985, 1]) },
+    ],
+  }));
+
+  return (
+    <Animated.View style={style}>
+      <AppText variant="body" style={[styles.word, { color }]}>
+        {text}
+      </AppText>
+    </Animated.View>
+  );
+}
+
+/**
+ * Assistant copy resolves one word at a time. The stagger is deliberately
+ * small so a long answer feels considered, not performed.
+ */
+function AnimatedMessageText({
+  content,
+  animate,
+}: {
+  content: string;
+  animate: boolean;
+}) {
+  const colors = useColors();
+  let wordIndex = 0;
+
+  return (
+    <View style={styles.animatedText}>
+      {content.split('\n').map((line, lineIndex) => {
+        const words = line.split(/\s+/).filter(Boolean);
+        if (words.length === 0) {
+          return <View key={`blank-${lineIndex}`} style={styles.blankLine} />;
+        }
+        return (
+          <View key={`line-${lineIndex}`} style={styles.wordRow}>
+            {words.map((word) => {
+              const current = wordIndex++;
+              return (
+                <AnimatedWord
+                  key={`${current}-${word}`}
+                  text={word}
+                  index={current}
+                  animate={animate}
+                  color={colors.textPrimary}
+                />
+              );
+            })}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Track the keyboard so the composer can drop its tab-bar clearance. */
+function useKeyboardVisible() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, () => setVisible(true));
+    const hide = Keyboard.addListener(hideEvent, () => setVisible(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  return visible;
 }
 
 /**
@@ -86,8 +205,11 @@ function TypingDots() {
  */
 export function CoachChat() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
+  const keyboardVisible = useKeyboardVisible();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<AIConversation[]>([]);
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -132,6 +254,7 @@ export function CoachChat() {
     async (content: string) => {
       const text = content.trim();
       if (!text || !conversationId || busy) return;
+      haptics.tap();
       setBusy(true);
       setDraft('');
       setError(null);
@@ -156,7 +279,7 @@ export function CoachChat() {
         scrollToEnd();
       }
     },
-    [api, busy, conversationId, scrollToEnd],
+    [api, busy, conversationId, haptics, scrollToEnd],
   );
 
   const openConversation = async (convo: AIConversation) => {
@@ -223,7 +346,7 @@ export function CoachChat() {
   };
 
   const confirmDelete = (id: string) => {
-    Alert.alert(
+    confirm(
       'Delete this conversation?',
       'The messages will be removed permanently.',
       [
@@ -237,17 +360,31 @@ export function CoachChat() {
     );
   };
 
+  const reportReply = async (message: AIMessage) => {
+    const subject = encodeURIComponent('Correr AI reply report');
+    const body = encodeURIComponent(
+      `I want to report an AI reply.\n\nReply:\n${message.content}\n\nWhat was wrong:\n`,
+    );
+    try {
+      await Linking.openURL(`mailto:support@correr.app?subject=${subject}&body=${body}`);
+    } catch {
+      setError('Could not open your email app. Email support@correr.app to report this reply.');
+    }
+  };
 
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
+      edges={['top']}
     >
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Conversation history"
-          onPress={() => setHistoryOpen(true)}
+          onPress={() => {
+            haptics.tap();
+            setHistoryOpen(true);
+          }}
           style={({ pressed }) => [
             styles.headerButton,
             { backgroundColor: colors.surface, ...shadows.subtle },
@@ -269,29 +406,38 @@ export function CoachChat() {
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open weekly review"
-          onPress={() => router.push('/weekly')}
+          accessibilityLabel="Coach settings"
+          onPress={() => {
+            haptics.tap();
+            router.push('/coach-settings');
+          }}
           style={({ pressed }) => [
             styles.headerButton,
             { backgroundColor: colors.surface, ...shadows.subtle },
             pressed && styles.pressed,
           ]}
         >
-          <Icon name="calendar" size={19} color={colors.textPrimary} />
+          <Icon name="gear" size={19} color={colors.textPrimary} />
         </Pressable>
       </View>
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
           ref={scrollRef}
           style={styles.flex}
-          contentContainerStyle={styles.thread}
+          contentContainerStyle={[
+            styles.thread,
+            messages.length === 0 && styles.threadEmpty,
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={scrollToEnd}
+          scrollEnabled={messages.length > 0 || loading || !!error}
+          onContentSizeChange={() => {
+            if (messages.length > 0 || busy) scrollToEnd();
+          }}
         >
           {loading ? (
             <View style={styles.loading}>
@@ -305,14 +451,18 @@ export function CoachChat() {
               <View style={styles.emptyCenter}>
                 <View style={styles.heroRow}>
                   <BrandMark size={32} />
-                  <AppText variant="hero">Let’s think.</AppText>
+                  <AppText variant="hero">Let’s talk.</AppText>
                 </View>
               </View>
             </Reveal>
           ) : (
             <View style={styles.messages}>
-              {messages.map((m) =>
-                m.role === 'user' ? (
+              {messages.map((m, index) => {
+                const latestAssistant = [...messages]
+                  .reverse()
+                  .find((message) => message.role === 'assistant')?.id;
+                const isLatestAssistant = m.role === 'assistant' && m.id === latestAssistant;
+                return m.role === 'user' ? (
                   <View key={m.id} style={styles.userRow}>
                     <View style={[styles.userBubble, { backgroundColor: colors.surfaceSunken }]}>
                       <AppText variant="body">{m.content}</AppText>
@@ -320,21 +470,34 @@ export function CoachChat() {
                   </View>
                 ) : (
                   <View key={m.id} style={styles.assistantRow}>
-                    <AppText variant="overline" tone="muted" style={styles.assistantLabel}>
-                      Coach
-                    </AppText>
-                    <AppText variant="body" style={styles.assistantText}>
-                      {m.content}
-                    </AppText>
+                    <View style={styles.assistantMeta}>
+                      <AppText variant="overline" tone="muted" style={styles.assistantLabel}>
+                        Coach
+                      </AppText>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Report this AI reply"
+                        onPress={() => void reportReply(m)}
+                        hitSlop={8}
+                      >
+                        <AppText variant="caption" tone="muted" style={styles.reportText}>
+                          Report
+                        </AppText>
+                      </Pressable>
+                    </View>
+                    <AnimatedMessageText
+                      content={m.content}
+                      animate={isLatestAssistant && index === messages.length - 1}
+                    />
                   </View>
-                ),
-              )}
+                );
+              })}
               {busy ? (
                 <View style={styles.assistantRow}>
                   <AppText variant="overline" tone="muted" style={styles.assistantLabel}>
                     Coach
                   </AppText>
-                  <TypingDots />
+                  <ThinkingOrb />
                 </View>
               ) : null}
             </View>
@@ -350,7 +513,18 @@ export function CoachChat() {
           ) : null}
         </ScrollView>
 
-        <View style={styles.composerWrap}>
+        <View
+          style={[
+            styles.composerWrap,
+            {
+              paddingBottom: keyboardVisible
+                ? spacing.sm
+                : Math.max(insets.bottom, layout.tabBarInset) +
+                  layout.tabBarHeight +
+                  spacing.sm,
+            },
+          ]}
+        >
           <View style={styles.composerInner}>
             <View
               style={[
@@ -361,58 +535,33 @@ export function CoachChat() {
               <TextInput
                 value={draft}
                 onChangeText={(value) => setDraft(value.slice(0, LIMITS.message))}
-                placeholder="How can I help you today?"
+                placeholder="Message your coach"
                 placeholderTextColor={colors.textMuted}
                 multiline
                 maxLength={LIMITS.message}
                 accessibilityLabel="Message your coach"
                 style={[styles.input, { color: colors.textPrimary }]}
               />
-              <View style={styles.composerFooter}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Start a new conversation"
-                  onPress={startNewConversation}
-                  disabled={busy}
-                  hitSlop={10}
-                  style={({ pressed }) => [
-                    styles.plusButton,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Icon name="plus" size={18} color={colors.textPrimary} />
-                </Pressable>
-
-                <View style={styles.composerMeta}>
-                  <Icon name="sparkles" size={13} color={colors.textMuted} />
-                  <AppText variant="caption" tone="muted">
-                    {draft.length > 1800
-                      ? `${draft.length}/${LIMITS.message}`
-                      : 'Coach knows your plan'}
-                  </AppText>
-                </View>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Send message"
-                  accessibilityState={{ disabled: !draft.trim() || busy }}
-                  disabled={!draft.trim() || busy}
-                  onPress={() => send(draft)}
-                  style={({ pressed }) => [
-                    styles.send,
-                    {
-                      backgroundColor: draft.trim() ? colors.textPrimary : colors.surfaceSunken,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Icon
-                    name="send"
-                    size={19}
-                    color={draft.trim() ? colors.textInverse : colors.textMuted}
-                  />
-                </Pressable>
-              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Send message"
+                accessibilityState={{ disabled: !draft.trim() || busy }}
+                disabled={!draft.trim() || busy}
+                onPress={() => send(draft)}
+                style={({ pressed }) => [
+                  styles.send,
+                  {
+                    backgroundColor: draft.trim() ? colors.textPrimary : colors.surface,
+                  },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Icon
+                  name="send"
+                  size={19}
+                  color={draft.trim() ? colors.textInverse : colors.textMuted}
+                />
+              </Pressable>
             </View>
           </View>
         </View>
@@ -640,6 +789,9 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  threadEmpty: {
+    justifyContent: 'center',
+  },
   loading: {
     gap: spacing.md,
   },
@@ -648,10 +800,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   emptyCenter: {
-    flexGrow: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 260,
   },
   heroRow: {
     flexDirection: 'row',
@@ -676,23 +825,54 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingRight: spacing.lg,
   },
+  assistantMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   assistantLabel: {
     fontSize: 10,
   },
-  assistantText: {
+  reportText: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  animatedText: {
     maxWidth: 480,
-    lineHeight: 24,
+    gap: 0,
   },
-  typing: {
+  wordRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    minHeight: 24,
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
-  typingDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
+  word: {
+    lineHeight: 24,
+    marginRight: 4,
+  },
+  blankLine: {
+    height: 12,
+  },
+  thinking: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thinkingRing: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+  },
+  thinkingCore: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   error: {
     marginTop: spacing.lg,
@@ -708,8 +888,9 @@ const styles = StyleSheet.create({
   composerWrap: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    // The floating tab bar overlays the bottom of the screen; keep the
-    // composer above it on every device.
+    // The floating tab bar overlays the bottom of the screen. The runtime
+    // value adds the real bottom inset, so the composer clears the capsule on
+    // devices with a home indicator as well as on flat-bottom devices.
     paddingBottom: layout.tabBarHeight + layout.tabBarInset + spacing.sm,
   },
   composerInner: {
@@ -718,37 +899,24 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   composer: {
-    borderRadius: radii.xxl,
-    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     gap: spacing.sm,
+    borderRadius: radii.xxl,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   input: {
+    flex: 1,
     fontFamily: fontFamily.sans,
     fontSize: 15,
     lineHeight: 22,
-    minHeight: 28,
+    minHeight: 40,
     maxHeight: 118,
-    paddingHorizontal: spacing.xs,
-    paddingTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm + 1,
+    paddingBottom: spacing.sm + 1,
     textAlignVertical: 'top',
-  },
-  composerFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  plusButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  composerMeta: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
   },
   send: {
     width: 40,

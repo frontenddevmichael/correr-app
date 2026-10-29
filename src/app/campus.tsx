@@ -18,8 +18,6 @@ function currentPeriod(timezone?: string): string {
   return dayKeyForTimezone(timezone ?? 'UTC').slice(0, 7);
 }
 
-const ORG_NAME = 'State University';
-
 /** Campus dashboard (Phase 8) — aggregate-only metrics, never row-level student data. */
 export default function CampusDashboard() {
   const api = useApi();
@@ -102,7 +100,7 @@ export default function CampusDashboard() {
   return (
     <Screen back="close"
       title="Campus dashboard"
-      subtitle={`${ORG_NAME} · ${metrics.period} · aggregate only`}
+      subtitle={`Your campus · ${metrics.period} · aggregate only`}
       header={
         <View style={styles.privacyRow}>
           <Badge label={`Cohort ≥ 10 enforced (${metrics.cohortSize})`} tone="info" dot />
@@ -117,7 +115,7 @@ export default function CampusDashboard() {
           {metrics.activeStudents}
         </AppText>
         <AppText variant="caption" tone="onDarkMuted">
-          Binned, k-anonymized counts — never individual activity.
+          Binned, anonymous counts. Never individual activity.
         </AppText>
       </Card>
 
@@ -150,6 +148,7 @@ const styles = StyleSheet.create({
   privacyRow: {
     alignItems: 'flex-end',
     marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xxl,
   },
   heroCard: {
     gap: spacing.xs,

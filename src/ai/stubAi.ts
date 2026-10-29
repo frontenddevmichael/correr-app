@@ -100,7 +100,7 @@ const CATEGORY_STRUCTURES: Record<
 const FIRST_ACTION_TEMPLATES = [
   'Block 30 focused minutes today and take the very first small step.',
   'Write down the single next action and do it before checking your phone again.',
-  'Spend 25 minutes on the first milestone — starting beats planning.',
+  'Spend 25 minutes on the first milestone. Starting beats planning.',
   'Message one person who can help or hold you accountable today.',
 ];
 
@@ -126,11 +126,11 @@ export class StubAi implements AiProvider {
     return {
       goals: structures.map((s, i) => ({
         title: s.goal,
-        description: `${vision.title}: ${s.goal.toLowerCase()} — step ${i + 1} of ${structures.length}, ${paceNote}.`,
+        description: `${vision.title}: ${s.goal.toLowerCase()}, step ${i + 1} of ${structures.length}, ${paceNote}.`,
         milestones: s.milestones.map((m, mi) => ({
           title: m,
           description: `Milestone ${mi + 1} toward “${s.goal}”.`,
-          timeframe: mi === 0 ? 'Weeks 1–3' : mi === 1 ? 'Weeks 4–8' : 'Weeks 9–12',
+          timeframe: mi === 0 ? 'Weeks 1 to 3' : mi === 1 ? 'Weeks 4 to 8' : 'Weeks 9 to 12',
         })),
       })),
       firstActions: [
@@ -144,25 +144,25 @@ export class StubAi implements AiProvider {
     const v = ctx.vision;
     const visionLine = v ? `your vision of ${v.title.toLowerCase()}` : 'your goals';
     const streakLine = ctx.streak && ctx.streak.commitmentStreak > 1
-      ? ` You're on a ${ctx.streak.commitmentStreak}-day streak — protect it.`
+      ? ` You are on a ${ctx.streak.commitmentStreak} day streak. Protect it.`
       : '';
     const openCount = ctx.todayCommitments.filter((c) => c.state !== 'completed').length;
     const commitmentLine =
       openCount > 0
         ? `You have ${openCount} commitment${openCount > 1 ? 's' : ''} left today.`
-        : 'Everything due today is done — nice work.';
+        : 'Everything due today is done. Nice work.';
 
     const lower = ctx.userMessage.toLowerCase();
 
     if (ctx.kind === 'recovery' || lower.includes('stuck') || lower.includes('behind')) {
-      return `That's okay — missing one commitment doesn't erase your progress toward ${visionLine}. ${commitmentLine} What got in the way? If it was time, shrink today's action to something you can finish in 10 minutes and rebuild momentum from there.${streakLine}`;
+      return `Missing one commitment does not erase your progress toward ${visionLine}. ${commitmentLine} What got in the way? If it was time, shrink today's action to 10 minutes.`;
     }
     if (lower.includes('plan') || lower.includes('roadmap') || ctx.kind === 'roadmap') {
-      return `Let's make the plan concrete. For ${visionLine}, the highest-leverage move right now is to pick one milestone and give it a deadline this week. Tell me how much time you realistically have each day and I'll shape the first milestone around it.${streakLine}`;
+      return `For ${visionLine}, pick one milestone and give it a deadline this week. How much time do you realistically have each day?`;
     }
     if (ctx.kind === 'weekly_review') {
-      return `Looking at your week: ${commitmentLine} The pattern I'd highlight is consistency over intensity — small completed commitments compound into ${visionLine}. What's one thing you'd do differently next week?${streakLine}`;
+      return `${commitmentLine} The pattern to keep is consistency over intensity. What is one thing you would change next week?${streakLine}`;
     }
-    return `I'm tracking ${visionLine} with you. ${commitmentLine}${streakLine} What would help most right now — breaking down a task, adjusting today's plan, or just staying accountable while you work?`;
+    return `I am tracking ${visionLine} with you. ${commitmentLine}${streakLine} What would help most right now?`;
   }
 }

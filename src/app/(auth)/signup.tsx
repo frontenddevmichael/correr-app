@@ -1,6 +1,12 @@
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApi, useSession } from '@/api/ApiProvider';
@@ -22,13 +28,14 @@ import {
   VALIDATION_COPY,
 } from '@/core/validation';
 import {
-  GoogleButton,
+  AuthBack,
+  AuthWordmark,
   LinkText,
-  OrDivider,
   useAuthInputStyle,
   useAuthLabelStyle,
 } from '@/features/auth/AuthUi';
 import { Eye, EyeOff } from '@/features/auth/EyeIcons';
+import { hasSessionConsent } from '@/features/legal/sessionConsent';
 
 export default function Signup() {
   const api = useApi();
@@ -47,6 +54,15 @@ export default function Signup() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // The consent checkbox lives at the end of the legal review screen. When the
+  // user returns, reflect the review they just completed without asking them to
+  // tick a second box on this form.
+  useFocusEffect(
+    useCallback(() => {
+      if (hasSessionConsent()) setAgreed(true);
+    }, []),
+  );
 
   const submit = async () => {
     setError(null);
@@ -91,38 +107,30 @@ export default function Signup() {
     }
   };
 
-  const onGoogle = async () => {
-    setBusy(true);
-    try {
-      await api.signInWithGoogle();
-      await refresh();
-      router.replace('/');
-    } catch (e) {
-      toast.show(e instanceof Error ? e.message : 'Google sign-in failed.', { tone: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.body}>
-          <View style={styles.top}>
-
-          </View>
-
-          {/*<AuthSegment active="signup" />*/}
-
-          <View style={styles.header}>
-            <AppText style={styles.title}>Let&apos;s get started.</AppText>
-            <AppText style={styles.subtitle}>
-              Create your account and start running toward your vision.
-            </AppText>
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.body}>
+            <AuthBack fallback="/(auth)/welcome" />
+            <View style={styles.top}>
+              <AuthWordmark />
+            </View>
+            <View style={styles.header}>
+              <AppText variant="display" center>
+                Let&apos;s get started.
+              </AppText>
+              <AppText variant="body" tone="secondary" center style={styles.subtitle}>
+                Create your account and start running toward your vision.
+              </AppText>
+            </View>
 
           <View style={styles.form}>
             <View>
@@ -176,7 +184,7 @@ export default function Signup() {
               <AppText style={[styles.label, authLabel]}>Password</AppText>
               <View style={styles.passwordWrap}>
                 <Input
-                  placeholder={`${LIMITS.passwordMin}–${LIMITS.passwordMax} characters`}
+                  placeholder={`${LIMITS.passwordMin} to ${LIMITS.passwordMax} characters`}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -210,52 +218,70 @@ export default function Signup() {
           </View>
 
           {error ? (
-            <AppText style={[styles.error, { color: colors.textPrimary }]}>{error}</AppText>
+            <AppText variant="caption" tone="error" center>
+              {error}
+            </AppText>
           ) : null}
 
-          {/* Consent gate — required before account creation (timestamped +
-              versioned server-side right after sign-up). */}
+          {/* Consent gate. The actual checkbox sits at the end of the legal
+              review screen so it cannot be ticked before the documents are in
+              front of the reader. */}
           <Pressable
-            onPress={() => setAgreed((current) => !current)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: agreed }}
-            accessibilityLabel="Agree to the Terms of Service and Privacy Policy"
-            style={styles.consentRow}
+            onPress={() =>
+              router.push({
+                pathname: '/legal/consent',
+                params: { returnTo: 'signup' },
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={
+              agreed
+                ? 'Legal documents reviewed. Open to review again.'
+                : 'Review the Terms, Privacy Policy and AI Disclosure before creating an account.'
+            }
+            style={({ pressed }) => [
+              styles.legalRow,
+              {
+                backgroundColor: colors.surface,
+                borderColor: agreed ? colors.brand : colors.border,
+              },
+              pressed && { opacity: 0.7 },
+            ]}
           >
-            <View
-              style={[
-                styles.consentBox,
-                agreed && {
-                  backgroundColor: colors.brand,
-                  borderColor: colors.brand,
-                },
-              ]}
-            >
-              {agreed ? <Icon name="check" size={13} color={colors.brandInverse} /> : null}
+            <View style={[styles.legalIcon, { backgroundColor: colors.surfaceSunken }]}>
+              <Icon
+                name={agreed ? 'check' : 'shield'}
+                size={18}
+                color={colors.textPrimary}
+              />
             </View>
-            <AppText variant="caption" tone="secondary" style={styles.consentText}>
-              I agree to the Terms of Service and Privacy Policy, and understand that AI
-              features are generated by a third-party provider (disclosed in Legal).
-            </AppText>
+            <View style={styles.legalText}>
+              <AppText variant="bodyMedium">
+                {agreed ? 'Legal documents reviewed' : 'Review before you continue'}
+              </AppText>
+              <AppText variant="caption" tone="secondary">
+                {agreed
+                  ? 'You agreed to the Terms, Privacy Policy and AI Disclosure.'
+                  : 'Open the full Terms, Privacy Policy and AI Disclosure. The checkbox is at the end.'}
+              </AppText>
+            </View>
+            <Icon name="chevronRight" size={17} color={colors.textMuted} />
           </Pressable>
-          <View style={styles.consentLinks}>
-            <LinkText
-              prefix="Read before you continue:"
-              link="Terms, Privacy & AI disclosure"
-              onPress={() => router.push('/legal')}
-            />
-          </View>
 
-          <Button label="Create account" onPress={submit} loading={busy} />
+          <Button
+            label="Create account"
+            onPress={submit}
+            loading={busy}
+            disabled={!agreed}
+          />
 
-          <OrDivider />
-          <GoogleButton onPress={onGoogle} />
           <LinkText
             prefix="Already have an account?"
             link="Log in"
             onPress={() => router.replace('/(auth)/login')}
           />
-        </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -264,10 +290,14 @@ export default function Signup() {
 const styles = createThemedStyles((colors) => ({
   safe: { flex: 1 },
   flex: { flex: 1 },
-  body: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  body: {
     gap: spacing.xl,
   },
   top: {
@@ -277,20 +307,7 @@ const styles = createThemedStyles((colors) => ({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  title: {
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.9,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
   subtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textSecondary,
-    textAlign: 'center',
     maxWidth: 300,
   },
   form: { gap: spacing.lg },
@@ -312,31 +329,23 @@ const styles = createThemedStyles((colors) => ({
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
   },
-  error: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  consentRow: {
+  legalRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.md,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: spacing.md,
   },
-  consentBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
+  legalIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
   },
-  consentText: {
+  legalText: {
     flex: 1,
-    lineHeight: 18,
-  },
-  consentLinks: {
-    marginTop: -spacing.sm,
+    gap: 2,
   },
 }));

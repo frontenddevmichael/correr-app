@@ -112,7 +112,7 @@ export async function clearWizardState(userId?: string | null): Promise<void> {
 export function useWizardState(userId?: string | null): {
   state: WizardState;
   ready: boolean;
-  setState: (next: WizardState) => void;
+  setState: (next: WizardState | ((current: WizardState) => WizardState)) => void;
 } {
   const [state, setStateRaw] = useState<WizardState>(EMPTY_STATE);
   const [loadedFor, setLoadedFor] = useState<string | null | undefined>(undefined);
@@ -139,9 +139,16 @@ export function useWizardState(userId?: string | null): {
   }, [userId]);
 
   const ready = loadedFor !== undefined && loadedFor === userId;
-  const setState = (next: WizardState) => {
-    setStateRaw(next);
-    void saveWizardState(next, userId);
+
+  // Persist after the state has committed. Writing from inside the setter
+  // would capture a stale snapshot when two updates happen in one event.
+  useEffect(() => {
+    if (!ready) return;
+    void saveWizardState(state, userId);
+  }, [ready, state, userId]);
+
+  const setState = (next: WizardState | ((current: WizardState) => WizardState)) => {
+    setStateRaw((current) => (typeof next === 'function' ? next(current) : next));
   };
 
   return { state, ready, setState };

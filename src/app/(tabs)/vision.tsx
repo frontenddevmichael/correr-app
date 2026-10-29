@@ -143,16 +143,6 @@ export default function Vision() {
       }
       refreshing={refreshing}
       onRefresh={() => load(true)}
-      footer={
-        <Button
-          label="New vision"
-          variant="secondary"
-          size="sm"
-          fullWidth={false}
-          leftIcon={<Icon name="plus" size={16} />}
-          onPress={create}
-        />
-      }
     >
       {error ? (
         <Card variant="muted">

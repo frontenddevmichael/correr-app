@@ -1,12 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
+import { friendlyErrorMessage } from '@/api/errorMessage';
 import type { Commitment, CommitmentEvent } from '@/core/domain';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
 import { Chip } from '@/design-system/Chip';
+import { useConfirm } from '@/design-system/confirm';
 import { EmptyState } from '@/design-system/EmptyState';
 import { Icon } from '@/design-system/icons';
 import { Input } from '@/design-system/Input';
@@ -46,6 +48,7 @@ function atHour(hour: number, dayOffset = 0): string {
 /** Commitment detail — the daily loop, staged as a status feed (ref3). */
 export default function CommitmentDetail() {
   const api = useApi();
+  const confirm = useConfirm();
   const colors = useColors();
   const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,23 +63,42 @@ export default function CommitmentDetail() {
   const [replacementTitle, setReplacementTitle] = useState('');
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
-    const [c, e] = await Promise.all([api.getCommitment(id), api.listEvents(id)]);
-    setCommitment(c);
-    setEvents(e);
-    setLoading(false);
+    try {
+      const [c, e] = await Promise.all([api.getCommitment(id), api.listEvents(id)]);
+      setCommitment(c);
+      setEvents(e);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(friendlyErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }, [api, id]);
+
+  const retryLoad = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.getCommitment(id), api.listEvents(id)])
-      .then(([c, e]) => {
+    (async () => {
+      try {
+        const [c, e] = await Promise.all([api.getCommitment(id), api.listEvents(id)]);
         if (!active) return;
         setCommitment(c);
         setEvents(e);
-        setLoading(false);
-      })
-      .catch(() => {});
+        setLoadError(null);
+      } catch (err) {
+        if (active) setLoadError(friendlyErrorMessage(err));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
     return () => {
       active = false;
     };
@@ -100,7 +122,7 @@ export default function CommitmentDetail() {
   const reschedule = (dueAt: string) => run(() => api.rescheduleCommitment(id, dueAt), 'Moved.');
 
   const cancel = () => {
-    Alert.alert('Cancel this commitment?', 'It stays in your history as cancelled.', [
+    confirm('Cancel this commitment?', 'It stays in your history as cancelled.', [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Cancel commitment',
@@ -111,7 +133,7 @@ export default function CommitmentDetail() {
   };
 
   const remove = () => {
-    Alert.alert(
+    confirm(
       'Delete this commitment permanently?',
       'It will be removed from your history, along with its event log. This cannot be undone.',
       [
@@ -142,7 +164,7 @@ export default function CommitmentDetail() {
     const reason = blocker.trim();
     const nextTitle = replacementTitle.trim();
     if (!reason) {
-      setRecoveryError('Say what got in the way — one honest sentence is enough.');
+      setRecoveryError('Say what got in the way. One honest sentence is enough.');
       return;
     }
     if (!isTitle(nextTitle)) {
@@ -173,12 +195,22 @@ export default function CommitmentDetail() {
   if (!commitment) {
     return (
       <Screen back="push" title="Commitment">
-        <EmptyState
-          icon="compass"
-          title="Commitment not found"
-          actionLabel="Back home"
-          onAction={() => router.replace('/(tabs)')}
-        />
+        {loadError ? (
+          <EmptyState
+            icon="compass"
+            title="Couldn’t load this commitment."
+            description={loadError}
+            actionLabel="Try again"
+            onAction={retryLoad}
+          />
+        ) : (
+          <EmptyState
+            icon="compass"
+            title="Commitment not found"
+            actionLabel="Back home"
+            onAction={() => router.replace('/(tabs)')}
+          />
+        )}
       </Screen>
     );
   }
@@ -242,7 +274,7 @@ export default function CommitmentDetail() {
             />
           ) : null}
           <Button
-            label="I missed it — recover"
+            label="I missed it. Recover"
             variant="muted"
             onPress={() => setShowRecovery((s) => !s)}
             disabled={busy}
@@ -254,7 +286,7 @@ export default function CommitmentDetail() {
         <Card variant="muted">
           <AppText variant="h2">Let’s reset.</AppText>
           <AppText variant="body" tone="secondary" style={styles.copy}>
-            Missing one commitment doesn’t erase your progress. What got in the way — and
+            Missing one commitment doesn’t erase your progress. What got in the way, and
             what’s the smaller next move?
           </AppText>
           <Input
@@ -348,7 +380,7 @@ export default function CommitmentDetail() {
         <Card variant="muted">
           <AppText variant="bodyBold">
             {commitment.recoveryCommitmentId
-              ? 'Recovered — a replacement commitment is now running.'
+              ? 'Recovered. A replacement commitment is now running.'
               : 'It happens. Start a recovery commitment when you’re ready.'}
           </AppText>
           {!commitment.recoveryCommitmentId ? (
@@ -397,7 +429,7 @@ export default function CommitmentDetail() {
                 <View style={[styles.eventText, i < events.length - 1 && styles.eventSpacing]}>
                   <AppText variant="bodyMedium">
                     {e.from ? `${e.from} → ${e.to}` : `created → ${e.to}`}
-                    {e.note ? ` — ${e.note}` : ''}
+                    {e.note ? `: ${e.note}` : ''}
                   </AppText>
                   <AppText variant="caption" tone="muted">
                     {new Date(e.at).toLocaleString()}

@@ -1,15 +1,15 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
 import { useApi, useSession } from '@/api/ApiProvider';
 import { Button } from '@/design-system/Button';
 import { Card } from '@/design-system/Card';
+import { Chip } from '@/design-system/Chip';
 import { Input } from '@/design-system/Input';
-import { createThemedStyles, useColors } from '@/design-system/theme';
+import { Screen } from '@/design-system/Screen';
 import { useToast } from '@/design-system/Toast';
-import { Toggle } from '@/design-system/Toggle';
+import { spacing } from '@/design-system/tokens';
 import { AppText } from '@/design-system/typography';
 import {
   isName,
@@ -17,43 +17,65 @@ import {
   sanitizeName,
   VALIDATION_COPY,
 } from '@/core/validation';
-import {
-  AuthWordmark,
-  useAuthInputStyle,
-  useAuthLabelStyle,
-} from '@/features/auth/AuthUi';
+
+const FOCUS_OPTIONS = [
+  'Career',
+  'Health',
+  'Money',
+  'Learning',
+  'Creativity',
+  'Relationships',
+  'Faith',
+  'Confidence',
+];
 
 /**
- * Profile setup — design gap filled in the auth design language (FR-02).
- * Display name, timezone, notification preferences.
+ * Edit profile. This is the source of the context the coach uses, so it asks
+ * for the few things that actually change the quality of a reply: the name it
+ * uses, a short about-you note, and the areas the user is working on.
  */
 export default function ProfileSetup() {
-  const { profile } = useSession();
-
-  // If the profile resolves after the screen mounts, remount the form once so
-  // its fields initialise from the profile instead of staying blank.
-  return <ProfileSetupForm key={profile?.userId ?? 'pending'} />;
-}
-
-function ProfileSetupForm() {
   const api = useApi();
-  const colors = useColors();
-  const authInput = useAuthInputStyle();
-  const authLabel = useAuthLabelStyle();
   const toast = useToast();
   const { profile, refresh } = useSession();
   const [name, setName] = useState(profile?.displayName ?? '');
-  const [notificationsOn, setNotificationsOn] = useState(
-    profile?.notificationPrefs.commitmentReminders ?? true,
-  );
+  const [bio, setBio] = useState(profile?.bio ?? '');
+  const [focusAreas, setFocusAreas] = useState<string[]>(profile?.focusAreas ?? []);
+  const [customFocus, setCustomFocus] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [hydratedFor, setHydratedFor] = useState(profile?.userId ?? null);
 
-  const timezone = profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+  // A deep link can reach this screen before the profile resolves. Hydrate once
+  // per user so the form never saves empty fields over real context.
+  if (profile && profile.userId !== hydratedFor) {
+    setHydratedFor(profile.userId);
+    setName(profile.displayName ?? '');
+    setBio(profile.bio ?? '');
+    setFocusAreas(profile.focusAreas ?? []);
+  }
+
+  const timezone =
+    profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+
+  const toggleFocus = (value: string) => {
+    setFocusAreas((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
+    );
+  };
+
+  const addCustomFocus = () => {
+    const value = customFocus.trim();
+    if (!value) return;
+    if (!focusAreas.some((item) => item.toLowerCase() === value.toLowerCase())) {
+      setFocusAreas((current) => [...current, value.slice(0, LIMITS.focus)]);
+    }
+    setCustomFocus('');
+  };
 
   const submit = async () => {
-    setError(null);
     if (!isName(name)) {
       setNameError(VALIDATION_COPY.name);
       toast.show('Check your display name.', { tone: 'error' });
@@ -64,179 +86,163 @@ function ProfileSetupForm() {
     try {
       await api.updateProfile({
         displayName: name.trim(),
+        bio: bio.trim(),
+        focusAreas,
         timezone,
-        notificationPrefs: {
-          ...(profile?.notificationPrefs ?? {
-            commitmentReminders: true,
-            commitmentOverdue: true,
-            partnerInteractions: true,
-            dailyCheckIn: true,
-            dailyCheckInWindow: '20:00',
-            weeklyReview: true,
-            weeklyReviewDay: 0,
-            aiInsights: true,
-            quietHoursStart: '22:00',
-            quietHoursEnd: '07:00',
-          }),
-          commitmentReminders: notificationsOn,
-        },
       });
       await refresh();
       toast.show('Profile saved.', { tone: 'success' });
-      router.replace('/');
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Something went wrong.';
-      setError(message);
-      toast.show(message, { tone: 'error' });
+      toast.show(e instanceof Error ? e.message : 'Could not save your profile.', {
+        tone: 'error',
+      });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={styles.body}>
-        <View style={styles.top}>
-          <AuthWordmark />
-        </View>
-        <View style={styles.header}>
-          <AppText style={styles.title}>Set up your profile.</AppText>
-          <AppText style={styles.subtitle}>
-            Your coach and accountability partner will see this name. You can change everything
-            later in Settings.
-          </AppText>
-        </View>
-
-        <View style={styles.form}>
-          <View>
-            <AppText style={[styles.label, authLabel]}>Display name</AppText>
-            <Input
-              placeholder="e.g. Jane Doe"
-              autoCapitalize="words"
-              autoComplete="name"
-              textContentType="name"
-              returnKeyType="done"
-              maxLength={LIMITS.nameMax}
-              value={name}
-              error={nameError ?? undefined}
-              onChangeText={(value) => {
-                setName(sanitizeName(value));
-                if (nameError) setNameError(null);
-              }}
-              onBlur={() => {
-                if (name.trim() && !isName(name)) setNameError(VALIDATION_COPY.name);
-              }}
-              onSubmitEditing={submit}
-              containerStyle={styles.inputGap}
-              style={authInput}
-            />
-          </View>
-          <View>
-            <AppText style={[styles.label, authLabel]}>Timezone</AppText>
-            <Card variant="sunken" style={styles.timezoneCard}>
-              <AppText style={styles.timezoneText}>{timezone}</AppText>
-            </Card>
-            <AppText style={styles.hint}>
-              Used for reminders and check-in windows. Detected automatically.
-            </AppText>
-          </View>
-          <Card variant="outlined" style={styles.prefCard}>
-            <View style={styles.prefRow}>
-              <View style={styles.prefText}>
-                <AppText style={styles.prefTitle}>Notifications</AppText>
-                <AppText style={styles.prefDesc}>
-                  Commitment reminders, check-ins and partner activity. Every category is
-                  configurable later.
-                </AppText>
-              </View>
-              <Toggle
-                value={notificationsOn}
-                onValueChange={setNotificationsOn}
-                accessibilityLabel="Commitment reminders"
-              />
-            </View>
-          </Card>
-        </View>
-
-        {error ? <AppText style={styles.error}>{error}</AppText> : null}
-
-        <Button label="Continue" onPress={submit} loading={busy} />
+    <Screen
+      back="push"
+      eyebrow="Profile"
+      title="Edit profile."
+      subtitle="A little context helps your coach give you a better answer. This stays private."
+      avoidKeyboard
+      footer={
+        <Button
+          label="Save changes"
+          onPress={submit}
+          loading={busy}
+          disabled={busy}
+        />
+      }
+    >
+      <View style={styles.section}>
+        <Input
+          label="Display name"
+          placeholder="e.g. Jane Doe"
+          autoCapitalize="words"
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="next"
+          maxLength={LIMITS.nameMax}
+          value={name}
+          error={nameError ?? undefined}
+          onChangeText={(value) => {
+            setName(sanitizeName(value));
+            if (nameError) setNameError(null);
+          }}
+          onBlur={() => {
+            if (name.trim() && !isName(name)) setNameError(VALIDATION_COPY.name);
+          }}
+        />
+        <AppText variant="caption" tone="muted" style={styles.hint}>
+          Your coach and accountability partner will see this name.
+        </AppText>
       </View>
-    </SafeAreaView>
+
+      <View style={styles.section}>
+        <AppText variant="h3">What are you working on?</AppText>
+        <AppText variant="caption" tone="muted">
+          Pick the areas that matter right now. Add your own if the list does not fit.
+        </AppText>
+        <View style={styles.chipRow}>
+          {FOCUS_OPTIONS.map((option) => (
+            <Chip
+              key={option}
+              label={option}
+              selected={focusAreas.includes(option)}
+              onPress={() => toggleFocus(option)}
+            />
+          ))}
+          {focusAreas
+            .filter((item) => !FOCUS_OPTIONS.includes(item))
+            .map((option) => (
+              <Chip
+                key={option}
+                label={option}
+                selected
+                onPress={() => toggleFocus(option)}
+              />
+            ))}
+        </View>
+        <View style={styles.addRow}>
+          <Input
+            value={customFocus}
+            onChangeText={(value) => setCustomFocus(value.slice(0, LIMITS.focus))}
+            placeholder="Add your own"
+            returnKeyType="done"
+            onSubmitEditing={addCustomFocus}
+            containerStyle={styles.addInput}
+          />
+          <Button
+            label="Add"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            onPress={addCustomFocus}
+            disabled={!customFocus.trim()}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Input
+          label="About you"
+          placeholder="A line or two about what you are building, what helps you focus, or what gets in the way."
+          value={bio}
+          onChangeText={(value) => setBio(value.slice(0, LIMITS.mediumText))}
+          multiline
+          maxLength={LIMITS.mediumText}
+          textAlignVertical="top"
+          style={styles.bioInput}
+          hint="Your coach uses this for context. It is never shown publicly."
+        />
+      </View>
+
+      <View style={styles.section}>
+        <AppText variant="h3">Timezone</AppText>
+        <Card variant="sunken" style={styles.timezoneCard}>
+          <AppText variant="bodyMedium" tone="secondary">
+            {timezone}
+          </AppText>
+        </Card>
+        <AppText variant="caption" tone="muted">
+          Detected automatically. Used for reminders and check-in windows.
+        </AppText>
+      </View>
+    </Screen>
   );
 }
 
-const styles = createThemedStyles((colors) => ({
-  safe: { flex: 1 },
-  body: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    gap: 20,
-  },
-  top: {
-    alignItems: 'center',
-  },
-  header: { alignItems: 'center', gap: 8 },
-  title: {
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.9,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: 8,
-  },
-  form: { gap: 18 },
-  label: {},
-  inputGap: { marginTop: 6 },
-  timezoneCard: {
-    marginTop: 6,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  timezoneText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 15,
-    color: colors.textSecondary,
+const styles = StyleSheet.create({
+  section: {
+    gap: spacing.sm,
   },
   hint: {
-    marginTop: 6,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
-    marginLeft: 4,
+    marginLeft: spacing.xs,
   },
-  prefCard: { padding: 16 },
-  prefRow: {
+  chipRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  prefText: { flex: 1, gap: 4 },
-  prefTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
-    color: colors.textPrimary,
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
-  prefDesc: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textSecondary,
+  addInput: {
+    flex: 1,
   },
-  error: {
-    color: colors.textPrimary, // monochrome: errors carry weight, not hue
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    textAlign: 'center',
+  bioInput: {
+    minHeight: 124,
+    paddingTop: spacing.md,
   },
-}));
+  timezoneCard: {
+    paddingVertical: spacing.md,
+  },
+});

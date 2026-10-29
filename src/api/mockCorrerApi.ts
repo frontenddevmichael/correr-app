@@ -1361,6 +1361,12 @@ export class MockCorrerApi implements CorrerApi {
     });
   }
 
+  async clearRead(): Promise<void> {
+    await this.tx((db) => {
+      db.notifications = db.notifications.filter((n) => !n.readAt);
+    });
+  }
+
   async setPreference(kind: NotificationKind, enabled: boolean): Promise<void> {
     const map: Partial<Record<NotificationKind, keyof Profile['notificationPrefs']>> = {
       commitment_reminder: 'commitmentReminders',

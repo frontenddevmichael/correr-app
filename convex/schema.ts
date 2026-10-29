@@ -116,6 +116,7 @@ export default defineSchema({
     timezone: v.string(),
     avatarColor: v.string(),
     bio: v.optional(v.string()),
+    focusAreas: v.optional(v.array(v.string())),
     appearance: v.optional(v.string()),
     level: v.string(),
     xp: v.number(),
@@ -123,6 +124,10 @@ export default defineSchema({
     notificationPrefs,
     /** Coach tone chosen in onboarding (warm | direct | socratic). */
     coachingTone: v.optional(v.string()),
+    /** Coach reply length preference (brief | balanced | detailed). */
+    coachLength: v.optional(v.string()),
+    /** A short note the user wants the coach to remember. */
+    coachContext: v.optional(v.string()),
     /** Consent captured at sign-up: policy version + ISO timestamp. */
     consentVersion: v.optional(v.string()),
     consentAt: v.optional(v.string()),

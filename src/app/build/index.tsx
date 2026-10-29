@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useApi } from '@/api/ApiProvider';
+import { friendlyErrorMessage } from '@/api/errorMessage';
 import { formatDateRange } from '@/core/dates';
 import type { Hackathon } from '@/core/domain';
 import { Badge } from '@/design-system/Badge';
@@ -28,23 +29,31 @@ export default function BuildHub() {
   const colors = useColors();
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const fetchList = useCallback(async () => {
+    try {
+      const list = await api.listHackathons();
+      setHackathons(list);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(friendlyErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      api
-        .listHackathons()
-        .then((list) => {
-          if (!active) return;
-          setHackathons(list);
-          setLoading(false);
-        })
-        .catch(() => {});
-      return () => {
-        active = false;
-      };
-    }, [api]),
+      void fetchList();
+    }, [fetchList]),
   );
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(null);
+    void fetchList();
+  };
 
   if (loading) {
     return (
@@ -58,9 +67,17 @@ export default function BuildHub() {
   return (
     <Screen back="push"
       title="Correr Build"
-      subtitle="Timed build sprints — form a team, run daily commitments, ship something real."
+      subtitle="Timed build sprints. Form a team, run daily commitments, ship something real."
     >
-      {hackathons.length === 0 ? (
+      {loadError ? (
+        <EmptyState
+          icon="wrench"
+          title="Couldn’t load sprints."
+          description={loadError}
+          actionLabel="Try again"
+          onAction={retryLoad}
+        />
+      ) : hackathons.length === 0 ? (
         <EmptyState
           icon="wrench"
           title="No sprints yet"
@@ -107,7 +124,7 @@ export default function BuildHub() {
         </AppText>
         <Card variant="outlined" padded={false}>
           {[
-            ['1', 'Form a team', 'Create a crew of 2–4 or join with an invite code.'],
+            ['1', 'Form a team', 'Create a crew of 2 to 4 or join with an invite code.'],
             ['2', 'Run the sprint', 'Daily standups become commitments you check in on.'],
             ['3', 'Ship the demo', 'Submit what you built and get judge feedback.'],
           ].map(([step, title, detail]) => (
