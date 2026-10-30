@@ -1,0 +1,576 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * Theme is class-based: `dark` on <html>. Set before paint by the
+ * inline script in layout.tsx so there is no flash.
+ * ------------------------------------------------------------------ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces — a white sheet on a soft grey, after the Exyte reference. */
+  --canvas: #ffffff;
+  --surface: #ffffff;
+  --sunken: #f5f5f5;
+  --band: #f2f2f2;
+
+  /* Ink */
+  --ink: #101010;
+  --ink-soft: #262626;
+  --secondary: #4f4f4f;
+  --muted: #8a8a8a;
+
+  /* Lines */
+  --line: #e8e8e8;
+  --line-strong: #d4d4d4;
+  --dots: #d6d6d6;
+
+  /* Phone bezel */
+  --bezel: #171410;
+  --bezel-edge: rgba(255, 252, 247, 0.14);
+
+  /* Frame width / height for the iPhone render (see PhoneFrame.tsx). Used as
+     the factor when a phone has to fit inside the viewport height. */
+  --phone-ratio: 0.5413;
+
+  /* The ink section is fixed in both schemes — it is the app's check-in card. */
+  --ink-bg: #171410;
+  --ink-fg: #f4f1eb;
+  --ink-muted: #91897e;
+  --ink-line: #3a342c;
+  --ink-fill: #26221d;
+  --ink-paper: #fffcf7;
+  --ink-paper-fg: #171410;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --canvas: #0b0b0b;
+  --surface: #121212;
+  --sunken: #171717;
+  --band: #0f0f0f;
+
+  --ink: #f4f4f4;
+  --ink-soft: #e2e2e2;
+  --secondary: #b3b3b3;
+  --muted: #8d8d8d;
+
+  --line: #262626;
+  --line-strong: #3a3a3a;
+  --dots: #2e2e2e;
+
+  --bezel: #262626;
+  --bezel-edge: rgba(0, 0, 0, 0.6);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-band: var(--band);
+  --color-dots: var(--dots);
+
+  --color-inkbg: var(--ink-bg);
+  --color-inkfg: var(--ink-fg);
+  --color-inkmuted: var(--ink-muted);
+  --color-inkline: var(--ink-line);
+  --color-inkfill: var(--ink-fill);
+  --color-inkpaper: var(--ink-paper);
+  --color-inkpaperfg: var(--ink-paper-fg);
+
+  --font-display: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-field: 14px;
+  --radius-pill: 9999px;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--ink);
+    color: var(--canvas);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* The ink section needs its own focus ring. */
+  .on-ink :focus-visible {
+    outline-color: var(--ink-fg);
+  }
+
+  img,
+  svg {
+    display: block;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* ---------------- Type ---------------- */
+  /* Display type is light and geometric — the Exyte reference: large, airy,
+     low-contrast, with emphasis carried by weight rather than colour. */
+  .t-display-xl {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    font-size: clamp(2.9rem, 6.5vw, 6.1rem);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .t-display-xl-soft {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    font-size: clamp(2.9rem, 6.5vw, 6.1rem);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .t-display-l {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    font-size: clamp(2.4rem, 5.2vw, 4.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .t-display-l-soft {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    font-size: clamp(2.4rem, 5.2vw, 4.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .t-statement {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    font-size: clamp(2.1rem, 5.4vw, 4.6rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+
+  .t-heading {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 300;
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .t-card-title {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 1.375rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .t-lead {
+    font-size: clamp(1rem, 1.15vw, 1.125rem);
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+    max-width: 34ch;
+  }
+
+  .t-body {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    max-width: 62ch;
+  }
+
+  .t-caption {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .t-micro {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    font-weight: 500;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------- Legal prose ---------------- */
+  .legal h2 {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-top: 2.75rem;
+  }
+
+  .legal h2:first-child {
+    margin-top: 0;
+  }
+
+  .legal p {
+    margin-top: 0.85rem;
+    max-width: 66ch;
+    color: var(--secondary);
+    line-height: 1.7;
+  }
+
+  .legal ul {
+    margin-top: 0.9rem;
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .legal li {
+    position: relative;
+    margin-top: 0.5rem;
+    padding-left: 1.35rem;
+    color: var(--secondary);
+    line-height: 1.7;
+  }
+
+  .legal li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--muted);
+  }
+
+  .legal a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .legal code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    background: var(--sunken);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+
+  /* ---------------- Structure ---------------- */
+  .shell {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: 40px;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .shell {
+      padding-inline: 64px;
+    }
+  }
+
+  .hairline {
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---------------- Surfaces ---------------- */
+  .card {
+    border-radius: 18px;
+    background: var(--sunken);
+  }
+
+  .card-outline {
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  /* Buttons: a black pill, or the quiet grey pill with an arrow. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    height: 54px;
+    padding-inline: 26px;
+    border-radius: 9999px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition:
+      background-color 200ms ease,
+      color 200ms ease,
+      opacity 200ms ease;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .btn-primary:hover {
+    background: var(--ink-soft);
+  }
+
+  .btn-quiet {
+    background: var(--sunken);
+    color: var(--ink);
+  }
+
+  .btn-quiet:hover {
+    background: var(--line);
+  }
+
+  /* A dot cluster, after the Exyte reference. Purely decorative. */
+  .dots {
+    background-image: radial-gradient(var(--dots) 1.1px, transparent 1.1px);
+    background-size: 14px 14px;
+    background-position: 0 0;
+  }
+
+  /* The oversized wordmark that closes the page. */
+  .wordmark {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.04em;
+    line-height: 0.72;
+    user-select: none;
+  }
+
+  /* Studio light: a single soft source behind the device. Barely there in a
+     screenshot, but it keeps a full-bleed paper section from reading flat. */
+  .ambient {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .ambient::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      60% 55% at 50% 0%,
+      var(--sunken),
+      transparent 70%
+    );
+  }
+
+  /* ---------------- Phone ---------------- */
+  /* Hardware comes from react-mockframe (measured iPhone 18 Pro). These rules
+     only light it and put the app inside the display. */
+  .phone-device {
+    filter: drop-shadow(0 2px 2px rgba(23, 20, 16, 0.1))
+      drop-shadow(0 34px 60px rgba(23, 20, 16, 0.24))
+      drop-shadow(0 80px 120px rgba(23, 20, 16, 0.16));
+  }
+
+  .dark .phone-device {
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5))
+      drop-shadow(0 34px 60px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 80px 140px rgba(0, 0, 0, 0.45));
+  }
+
+  /* Entrance for above-the-fold copy. CSS, not JS, so the hero is never
+     blank between HTML paint and hydration. */
+  .rise {
+    animation: rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .rise-1 {
+    animation-delay: 0.09s;
+  }
+
+  .rise-2 {
+    animation-delay: 0.18s;
+  }
+
+  .rise-3 {
+    animation-delay: 0.27s;
+  }
+
+  .rise-4 {
+    animation-delay: 0.45s;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 20px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .phone-float {
+    animation: phone-float 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  @keyframes phone-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -10px, 0);
+    }
+  }
+
+  .mockframe .screen {
+    background: var(--canvas);
+  }
+
+  .phone-ui {
+    position: absolute;
+    inset: 0;
+    background: var(--canvas);
+    --status-ink: #141210;
+    --indicator: rgba(20, 18, 16, 0.62);
+  }
+
+  .dark .phone-ui {
+    --status-ink: #f4f1eb;
+    --indicator: rgba(244, 241, 235, 0.62);
+  }
+
+  /* Status strip continues the app canvas under a real iOS status bar. */
+  .phone-status {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 30px 0;
+    color: var(--status-ink);
+    z-index: 4;
+  }
+
+  .phone-time {
+    font-size: 16.5px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .phone-status-icons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding-top: 1px;
+  }
+
+  .phone-body {
+    position: absolute;
+    inset: 54px 0 0 0;
+    background: var(--canvas);
+  }
+
+  .phone-glare {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        128deg,
+        rgba(255, 255, 255, 0.16) 0%,
+        rgba(255, 255, 255, 0.05) 18%,
+        rgba(255, 255, 255, 0) 42%
+      ),
+      radial-gradient(
+        120% 60% at 85% -10%,
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0) 60%
+      );
+    mix-blend-mode: soft-light;
+    border-radius: inherit;
+  }
+
+  .phone-home-indicator {
+    position: absolute;
+    bottom: 9px;
+    left: 50%;
+    width: 140px;
+    height: 5px;
+    margin-left: -70px;
+    border-radius: 9999px;
+    background: var(--indicator);
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .phone-float {
+      animation: none;
+    }
+  }
+
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

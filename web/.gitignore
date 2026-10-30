@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+.DS_Store
+
+# Review artefacts: screenshots taken at 375 / 768 / 1440 in light and dark.
+review/

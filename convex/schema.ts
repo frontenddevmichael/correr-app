@@ -416,4 +416,18 @@ export default defineSchema({
     windowStart: v.number(),
     count: v.number(),
   }).index("by_key", ["key"]),
+
+  /**
+   * Marketing-site waitlist. `emailLower` is the uniqueness key: the mutation
+   * queries this index before inserting so a duplicate returns the same
+   * success state. Convex indexes are not unique constraints, so the check
+   * lives in `convex/waitlist.ts` (mutations are serialised, making the
+   * read-then-insert atomic).
+   */
+  waitlist: defineTable({
+    email: v.string(),
+    emailLower: v.string(),
+    source: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_email_lower", ["emailLower"]),
 });

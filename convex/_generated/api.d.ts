@@ -28,6 +28,7 @@ import type * as partnerships from "../partnerships.js";
 import type * as profile from "../profile.js";
 import type * as roadmap from "../roadmap.js";
 import type * as visions from "../visions.js";
+import type * as waitlist from "../waitlist.js";
 
 import type {
   ApiFromModules,
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   profile: typeof profile;
   roadmap: typeof roadmap;
   visions: typeof visions;
+  waitlist: typeof waitlist;
 }>;
 
 /**
