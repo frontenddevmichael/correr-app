@@ -79,7 +79,7 @@ export function Footer() {
         </div>
 
         <div className="mt-16 overflow-hidden" aria-hidden="true">
-          <span className="wordmark -mb-[0.16em] block whitespace-nowrap text-center text-[clamp(88px,25vw,330px)] text-white/[0.06]">
+          <span className="wordmark -mb-[0.16em] block whitespace-nowrap text-center text-[clamp(88px,25vw,330px)] text-white/[0.09]">
             Correr
           </span>
         </div>

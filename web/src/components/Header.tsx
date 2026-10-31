@@ -30,9 +30,7 @@ export function Header() {
   return (
     <header
       className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
-        lifted
-          ? "border-line bg-canvas/85 backdrop-blur-md supports-[backdrop-filter]:bg-canvas/75"
-          : "border-transparent bg-canvas"
+        lifted ? "border-line bg-canvas" : "border-transparent bg-canvas"
       }`}
     >
       <div className="shell flex h-[64px] items-center justify-between gap-6 md:h-[76px]">
@@ -43,12 +41,12 @@ export function Header() {
             aria-label="Correr, back to top"
           >
             <Mark className="h-[22px] w-[22px] text-ink" />
-            <span className="font-display text-[15px] font-medium tracking-[0.22em] text-ink">
+            <span className="hidden font-display text-[15px] font-medium tracking-[0.22em] text-ink min-[400px]:inline">
               CORRER
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-8 lg:flex" aria-label="Site">
+          <nav className="hidden items-center gap-8 md:flex" aria-label="Site">
             {LINKS.map((link) => (
               <Link
                 key={link.href}
@@ -65,9 +63,10 @@ export function Header() {
           <ThemeToggle />
           <Link
             href="/#waitlist"
-            className="btn btn-primary h-11 px-5 text-[14px]"
+            className="btn btn-primary h-11 shrink-0 px-4 text-[14px] sm:px-5"
           >
-            Join the waitlist
+            <span className="sm:hidden">Join waitlist</span>
+            <span className="hidden sm:inline">Join the waitlist</span>
           </Link>
         </div>
       </div>

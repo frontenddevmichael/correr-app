@@ -368,6 +368,321 @@
     background-position: 0 0;
   }
 
+  /* ---------------- Hero atmosphere ---------------- */
+  /* The backdrop holds the pointer position as unitless numbers so each
+     layer can pick its own depth. Defaults keep it still without JS. */
+  .hero-backdrop {
+    --px: 0;
+    --py: 0;
+  }
+
+  .plx-1 {
+    translate: calc(var(--px) * 14px) calc(var(--py) * 9px);
+  }
+
+  .plx-2 {
+    translate: calc(var(--px) * -22px) calc(var(--py) * -13px);
+  }
+
+  .plx-3 {
+    translate: calc(var(--px) * 32px) calc(var(--py) * 20px);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, var(--line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: 88px 88px;
+    opacity: 0.5;
+    mask-image: radial-gradient(
+      72% 62% at 50% 26%,
+      #000 0%,
+      rgba(0, 0, 0, 0.45) 45%,
+      transparent 82%
+    );
+  }
+
+  .hero-glow {
+    position: absolute;
+    left: 50%;
+    top: -16%;
+    width: min(1120px, 130%);
+    aspect-ratio: 1;
+    translate: -50% 0;
+    border-radius: 9999px;
+    background: radial-gradient(
+      closest-side,
+      rgba(23, 20, 16, 0.07),
+      rgba(23, 20, 16, 0.025) 55%,
+      transparent 78%
+    );
+    animation: hero-breathe 15s ease-in-out infinite;
+  }
+
+  .dark .hero-glow {
+    background: radial-gradient(
+      closest-side,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.02) 55%,
+      transparent 78%
+    );
+  }
+
+  .hero-ring {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: min(940px, 165vw);
+    aspect-ratio: 1;
+    margin: -0.5px 0 0 -0.5px;
+    translate: -50% -50%;
+    border: 1px dashed var(--line-strong);
+    border-radius: 9999px;
+    opacity: 0.55;
+    animation: hero-spin 90s linear infinite;
+  }
+
+  .hero-ring::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    margin-left: -2.5px;
+    border-radius: 9999px;
+    background: var(--ink);
+    opacity: 0.45;
+  }
+
+  .hero-ring-2 {
+    width: min(1280px, 205vw);
+    border-style: solid;
+    border-color: var(--line);
+    opacity: 0.7;
+    animation: hero-spin 150s linear infinite reverse;
+  }
+
+  .hero-ring-2::after {
+    background: var(--muted);
+    opacity: 0.3;
+  }
+
+  .hero-dots {
+    position: absolute;
+    animation: hero-drift 18s ease-in-out infinite;
+  }
+
+  .hero-speck {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--line-strong);
+    border-radius: 9999px;
+    opacity: 0.9;
+    animation: hero-float 13s ease-in-out infinite;
+  }
+
+  .hero-speck-2 {
+    width: 5px;
+    height: 5px;
+    border: 0;
+    background: var(--line-strong);
+    animation-delay: -4s;
+  }
+
+  .hero-speck-3 {
+    width: 13px;
+    height: 13px;
+    animation-delay: -8s;
+  }
+
+  .hero-rule {
+    position: absolute;
+    top: 14%;
+    bottom: 14%;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--line) 22%,
+      var(--line) 78%,
+      transparent
+    );
+  }
+
+  /* The hero headline can afford to sit a touch smaller at 320px than the
+     shared display scale, where the wrap leaves one word orphaned. */
+  .hero-title {
+    font-size: clamp(2.6rem, 6.5vw, 6.1rem);
+  }
+
+  .hero-pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--ink);
+    animation: hero-pulse 2.8s ease-in-out infinite;
+  }
+
+  .mark-chip {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .mark-chip::after {
+    content: "";
+    position: absolute;
+    inset: -60%;
+    background: linear-gradient(
+      115deg,
+      transparent 42%,
+      rgba(255, 255, 255, 0.34) 50%,
+      transparent 58%
+    );
+    animation: mark-sweep 7s ease-in-out 1.6s infinite;
+  }
+
+  .hero-ticker {
+    position: relative;
+    margin-top: clamp(40px, 6vh, 72px);
+    background: var(--canvas);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding-block: 15px;
+    overflow: hidden;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 13%,
+      #000 87%,
+      transparent
+    );
+  }
+
+  @media (max-width: 640px) {
+    .hero-ticker {
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 18%,
+        #000 82%,
+        transparent
+      );
+    }
+  }
+
+  .hero-ticker-track {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+    animation: hero-marquee 52s linear infinite;
+  }
+
+  .hero-ticker:hover .hero-ticker-track {
+    animation-play-state: paused;
+  }
+
+  .hero-ticker-group {
+    display: flex;
+    align-items: center;
+  }
+
+  .hero-ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    padding-inline: 26px;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .hero-ticker-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--line-strong);
+  }
+
+  @keyframes hero-breathe {
+    0%,
+    100% {
+      opacity: 0.75;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+  }
+
+  @keyframes hero-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes hero-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -12px, 0);
+    }
+  }
+
+  @keyframes hero-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+      opacity: 0.9;
+    }
+    50% {
+      transform: translate3d(6px, -16px, 0);
+      opacity: 0.45;
+    }
+  }
+
+  @keyframes hero-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.8);
+    }
+  }
+
+  @keyframes mark-sweep {
+    0%,
+    55% {
+      transform: translate3d(-90%, 0, 0);
+    }
+    80%,
+    100% {
+      transform: translate3d(90%, 0, 0);
+    }
+  }
+
+  @keyframes hero-marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
   /* The oversized wordmark that closes the page. */
   .wordmark {
     font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
@@ -412,6 +727,15 @@
       drop-shadow(0 80px 140px rgba(0, 0, 0, 0.45));
   }
 
+  /* Inside a card the shadow has nowhere to fall away, so it is tightened. */
+  .card .phone-device {
+    filter: drop-shadow(0 10px 24px rgba(16, 16, 16, 0.14));
+  }
+
+  .dark .card .phone-device {
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55));
+  }
+
   /* Entrance for above-the-fold copy. CSS, not JS, so the hero is never
      blank between HTML paint and hydration. */
   .rise {
@@ -431,7 +755,11 @@
   }
 
   .rise-4 {
-    animation-delay: 0.45s;
+    animation-delay: 0.36s;
+  }
+
+  .rise-5 {
+    animation-delay: 0.48s;
   }
 
   @keyframes rise {
